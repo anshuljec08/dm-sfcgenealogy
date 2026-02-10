@@ -2,6 +2,8 @@
 
 A custom POD plugin for SAP Digital Manufacturing that displays the genealogy (assembled components) of a Shop Floor Control (SFC).
 
+<img width="1915" height="1076" alt="image" src="https://github.com/user-attachments/assets/43d3bc16-d8ec-45fc-99c6-fe017c088966" />
+
 ## Features
 
 - **Component Hierarchy View**: Flat list showing all assembled components with key information
@@ -19,6 +21,8 @@ A custom POD plugin for SAP Digital Manufacturing that displays the genealogy (a
 2. Zip all files (not the folder, just the contents)
 3. Upload to SAP Digital Manufacturing POD Designer as a custom plugin
 
+<img width="1437" height="706" alt="image" src="https://github.com/user-attachments/assets/f4e31680-ea76-4a1d-a7a8-cc82b13409f7" />
+
 ## Usage
 
 1. Add the plugin to a POD layout in POD Designer
@@ -29,11 +33,17 @@ A custom POD plugin for SAP Digital Manufacturing that displays the genealogy (a
 ## Views
 
 ### Component Hierarchy
+
+<img width="1897" height="493" alt="image" src="https://github.com/user-attachments/assets/d5aff6a1-12a3-4838-bd6b-75d0ad1c935f" />
+
 - Collapsible panel showing components in a flat list
 - Shows component name, description, quantity, unit of measure, and batch number
 - Click on any row to open the details dialog
 
 ### Components Summary
+
+<img width="1910" height="682" alt="image" src="https://github.com/user-attachments/assets/b2c1c719-436d-4aa9-87c1-ddbd0dad27e8" />
+
 - Detailed table with columns:
   - #: Row number
   - Component: Material number and version
@@ -47,6 +57,9 @@ A custom POD plugin for SAP Digital Manufacturing that displays the genealogy (a
   - Assembled Date/Time: When the component was assembled
 
 ### Visual Hierarchy
+
+<img width="1915" height="541" alt="image" src="https://github.com/user-attachments/assets/fd160601-99b2-4f69-abe1-7f0906e9d4d8" />
+
 - Graphical tree showing SFC at the top with all components below
 - Each component shows name and quantity
 - Click on any component to open the details dialog
@@ -89,12 +102,13 @@ sfcGenealogy/
 
 ## License
 
-MIT License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Author
+## 👨‍💻 Author
 
-Manoel Franklin
+Manoel Costa
+http://manoelcosta.com/
 
-## Version
+---
 
-1.0.0
+**Disclaimer:** This is a community extension and is not officially supported by SAP. Use at your own discretion.
