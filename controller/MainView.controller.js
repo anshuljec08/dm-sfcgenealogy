@@ -170,17 +170,25 @@ sap.ui.define([
 
             var sPlant = this.getPodController().getUserPlant();
             var sOperation = this._getCurrentOperation();
+            
+            // operationActivity is required - just the operation name
+            var sOperationActivity = sOperation || "";
 
-            // Build API URL
+            // If no operation, show message and return
+            if (!sOperationActivity) {
+                oModel.setProperty("/isLoading", false);
+                oModel.setProperty("/hasData", false);
+                this.showErrorMessage("Please select an operation to view assembled components", true, false);
+                return;
+            }
+
+            // Build API URL with required operationActivity parameter
             var sUrl = this.getPublicApiRestDataSourceUri() + "/assembly/v1/assembledComponents";
             sUrl += "?plant=" + encodeURIComponent(sPlant);
             sUrl += "&sfc=" + encodeURIComponent(sSfc);
-            
-            if (sOperation) {
-                sUrl += "&operation=" + encodeURIComponent(sOperation);
-            }
+            sUrl += "&operationActivity=" + encodeURIComponent(sOperationActivity);
 
-            oLogger.info("Fetching assembled components for SFC: " + sSfc);
+            oLogger.info("Fetching assembled components for SFC: " + sSfc + ", Operation: " + sOperationActivity);
 
             var that = this;
             this.ajaxGetRequest(sUrl, null,
@@ -198,16 +206,38 @@ sap.ui.define([
          */
         _processApiResponse: function (oResponse, sSfc) {
             var oModel = this.getView().getModel("genealogy");
-            oLogger.info("API Response:", oResponse);
+            
+            // Log full response for debugging
+            oLogger.info("API Response type:", typeof oResponse);
+            oLogger.info("API Response keys:", oResponse ? Object.keys(oResponse) : "null");
+            console.log("Full API Response:", JSON.stringify(oResponse, null, 2));
 
             var aComponents = [];
+            
+            // Handle different response structures
             if (oResponse && Array.isArray(oResponse)) {
+                oLogger.info("Response is array with length:", oResponse.length);
                 aComponents = oResponse;
-            } else if (oResponse && oResponse.assembledComponents) {
+            } else if (oResponse && oResponse.assembledComponents && Array.isArray(oResponse.assembledComponents)) {
+                oLogger.info("Response has assembledComponents array");
                 aComponents = oResponse.assembledComponents;
-            } else if (oResponse && oResponse.value) {
+            } else if (oResponse && oResponse.value && Array.isArray(oResponse.value)) {
+                oLogger.info("Response has value array");
                 aComponents = oResponse.value;
+            } else if (oResponse && typeof oResponse === 'object') {
+                // Check if response itself is a single component or has other structure
+                oLogger.info("Response is object, checking structure...");
+                // Try to find arrays in the response
+                for (var key in oResponse) {
+                    if (Array.isArray(oResponse[key])) {
+                        oLogger.info("Found array in key:", key, "with length:", oResponse[key].length);
+                        aComponents = oResponse[key];
+                        break;
+                    }
+                }
             }
+            
+            oLogger.info("Extracted components count:", aComponents.length);
 
             // Process components and build hierarchy
             var aProcessedComponents = this._processComponents(aComponents);
@@ -222,7 +252,74 @@ sap.ui.define([
 
             if (aProcessedComponents.length === 0) {
                 MessageToast.show("No assembled components found for this SFC");
+            } else {
+                // Build visual chart
+                this._buildVisualChart(aProcessedComponents, sSfc);
             }
+        },
+
+        /**
+         * Build visual hierarchy chart
+         */
+        _buildVisualChart: function (aComponents, sSfc) {
+            var oChartContainer = this.byId("visualHierarchyChart");
+            if (!oChartContainer) return;
+
+            // Clear existing content
+            oChartContainer.removeAllItems();
+
+            // Create SFC root node
+            var oSfcNode = new sap.m.VBox({
+                alignItems: "Center"
+            });
+            
+            oSfcNode.addItem(new sap.m.HBox({
+                justifyContent: "Center",
+                items: [
+                    new sap.ui.core.Icon({ src: "sap-icon://product", color: "white" }).addStyleClass("sapUiTinyMarginEnd"),
+                    new sap.m.Text({ text: sSfc })
+                ]
+            }).addStyleClass("sfcGenealogyChartNode"));
+
+            // Add connector line
+            oSfcNode.addItem(new sap.m.VBox({}).addStyleClass("sfcGenealogyChartConnector"));
+
+            // Create components branch
+            var oComponentsBranch = new sap.m.HBox({
+                wrap: "Wrap",
+                justifyContent: "Center"
+            }).addStyleClass("sfcGenealogyChartBranch");
+
+            var that = this;
+            aComponents.forEach(function (oComp) {
+                var oCompNode = new sap.m.VBox({
+                    alignItems: "Center",
+                    items: [
+                        new sap.m.HBox({
+                            alignItems: "Center",
+                            items: [
+                                new sap.ui.core.Icon({ src: "sap-icon://inventory", color: "white", size: "1rem" }).addStyleClass("sapUiTinyMarginEnd"),
+                                new sap.m.Text({ text: oComp.component })
+                            ]
+                        }),
+                        new sap.m.Text({ text: "Qty: " + oComp.quantityAssembled + " " + oComp.unitOfMeasure }).addStyleClass("sfcGenealogyChartQty")
+                    ]
+                }).addStyleClass("sfcGenealogyChartComponent");
+
+                // Store component data for click handler
+                oCompNode.data("componentData", oComp);
+                oCompNode.attachBrowserEvent("click", function () {
+                    var oData = this.data("componentData");
+                    if (oData) {
+                        that._showComponentDetails(oData);
+                    }
+                });
+
+                oComponentsBranch.addItem(oCompNode);
+            });
+
+            oSfcNode.addItem(oComponentsBranch);
+            oChartContainer.addItem(oSfcNode);
         },
 
         /**
@@ -231,33 +328,64 @@ sap.ui.define([
         _processComponents: function (aComponents) {
             var that = this;
             return aComponents.map(function (oComp, iIndex) {
+                // Log component structure for debugging
+                console.log("Processing component " + iIndex + ":", JSON.stringify(oComp, null, 2));
+                
                 // Extract assembly data fields
                 var aDataFields = oComp.assemblyDataFields || oComp.dataFields || [];
                 var oDataFieldsMap = {};
                 
                 aDataFields.forEach(function (oField) {
-                    var sFieldName = oField.fieldName || oField.name;
+                    var sFieldName = oField.fieldName || oField.name || oField.attribute;
                     var sFieldValue = oField.fieldValue || oField.value;
-                    oDataFieldsMap[sFieldName] = sFieldValue;
+                    if (sFieldName) {
+                        oDataFieldsMap[sFieldName] = sFieldValue;
+                    }
                 });
+
+                // Get operation - check multiple possible field names
+                var sOperation = oComp.operationActivity || oComp.operation || oComp.assemblyOperation || "";
+                var sOperationDesc = oComp.operationDescription || oComp.operationActivityDescription || "";
+                
+                // Get quantity - use assembledQuantity
+                var nQuantity = oComp.assembledQuantity || oComp.quantityAssembled || oComp.qty || oComp.quantity || 0;
+                
+                // Get assembled date - use assembledDate and format it
+                var sAssembledDate = oComp.assembledDate || oComp.assembledDateTime || oComp.createdDateTime || "";
+                if (sAssembledDate) {
+                    try {
+                        var oDate = new Date(sAssembledDate);
+                        sAssembledDate = oDate.toLocaleString();
+                    } catch (e) {
+                        // Keep original format if parsing fails
+                    }
+                }
+                
+                // Get batch number from main object (batchNumber field)
+                var sBatchNumber = oComp.batchNumber || "";
+                
+                // Get serial number from main object (serialNumber field) or data fields
+                var sSerialNumber = oComp.serialNumber || oDataFieldsMap["SERIAL_NUMBER"] || oDataFieldsMap["ERP_SERIAL_NUMBER"] || "";
 
                 return {
                     id: iIndex + 1,
-                    component: oComp.component || oComp.material || "",
+                    component: oComp.component || oComp.material || oComp.componentMaterial || "",
                     componentVersion: oComp.componentVersion || oComp.materialVersion || "",
                     description: oComp.componentDescription || oComp.description || oComp.materialDescription || "",
-                    operation: oComp.operation || oComp.assembledAtOperation || "",
-                    operationDescription: oComp.operationDescription || "",
+                    operation: sOperation,
+                    operationDescription: sOperationDesc,
                     sequence: oComp.sequence || oComp.assemblySequence || iIndex + 1,
-                    quantityAssembled: oComp.quantityAssembled || oComp.assembledQty || oComp.quantity || 0,
-                    unitOfMeasure: oComp.unitOfMeasure || oComp.uom || "",
-                    assembledDateTime: oComp.assembledDateTime || oComp.createdDateTime || "",
-                    assembledBy: oComp.assembledBy || oComp.userId || "",
+                    quantityAssembled: nQuantity,
+                    unitOfMeasure: oComp.unitOfMeasure || oComp.uom || oComp.unit || "",
+                    assembledDateTime: sAssembledDate,
+                    assembledBy: oComp.assembledBy || oComp.userId || oComp.modifiedBy || oComp.createdBy || "",
                     bomComponent: oComp.bomComponent || oComp.bomComponentRef || "",
-                    sfcAssembled: oComp.sfcAssembled || oComp.assembledSfc || "",
-                    batchNumber: oComp.batchNumber || oDataFieldsMap["BATCH"] || "",
-                    serialNumber: oComp.serialNumber || oDataFieldsMap["SERIAL"] || "",
+                    sfcAssembled: oComp.sfcAssembled || oComp.assembledSfc || oComp.childSfc || "",
+                    batchNumber: sBatchNumber,
+                    serialNumber: sSerialNumber,
                     vendorBatchNumber: oComp.vendorBatchNumber || oDataFieldsMap["VENDOR_BATCH"] || "",
+                    storageLocation: oComp.storageLocation || oDataFieldsMap["STORAGE_LOCATION"] || "",
+                    assemblyDataType: oComp.assemblyDataType || "",
                     assemblyDataFields: aDataFields,
                     assemblyDataFieldsMap: oDataFieldsMap,
                     hasDataFields: aDataFields.length > 0,
@@ -274,11 +402,14 @@ sap.ui.define([
          * Build hierarchy structure for tree display
          */
         _buildHierarchy: function (aComponents, sSfc) {
-            // Group by operation
+            // Group by operation - skip "No Operation" if operation exists
             var oGroupedByOperation = {};
             
             aComponents.forEach(function (oComp) {
-                var sOp = oComp.operation || "No Operation";
+                var sOp = oComp.operation;
+                if (!sOp) {
+                    return; // Skip components without operation
+                }
                 if (!oGroupedByOperation[sOp]) {
                     oGroupedByOperation[sOp] = {
                         operation: sOp,
@@ -290,41 +421,69 @@ sap.ui.define([
                 oGroupedByOperation[sOp].components.push(oComp);
             });
 
-            // Build tree structure
+            // Build tree structure - only include items with actual content
+            var aOperationNodes = [];
+            
+            Object.values(oGroupedByOperation).forEach(function (oGroup) {
+                if (!oGroup.components || oGroup.components.length === 0) {
+                    return; // Skip empty operation groups
+                }
+                
+                var aComponentNodes = [];
+                
+                oGroup.components.forEach(function (oComp) {
+                    if (!oComp.component) {
+                        return; // Skip components without component name
+                    }
+                    
+                    // Build data field nodes - only for non-empty values
+                    var aDataFieldNodes = [];
+                    if (oComp.assemblyDataFields && oComp.assemblyDataFields.length > 0) {
+                        oComp.assemblyDataFields.forEach(function (oField, idx) {
+                            var sFieldName = oField.fieldName || oField.name;
+                            var sFieldValue = oField.fieldValue || oField.value;
+                            if (sFieldName && sFieldValue) {
+                                aDataFieldNodes.push({
+                                    id: "field_" + oComp.id + "_" + idx,
+                                    text: sFieldName + ": " + sFieldValue,
+                                    icon: "sap-icon://tag",
+                                    type: "dataField"
+                                });
+                            }
+                        });
+                    }
+                    
+                    aComponentNodes.push({
+                        id: "comp_" + oComp.id,
+                        text: oComp.component + (oComp.description ? " - " + oComp.description : ""),
+                        icon: "sap-icon://inventory",
+                        type: "component",
+                        componentData: oComp,
+                        expanded: false,
+                        nodes: aDataFieldNodes.length > 0 ? aDataFieldNodes : undefined
+                    });
+                });
+                
+                if (aComponentNodes.length > 0) {
+                    aOperationNodes.push({
+                        id: "op_" + oGroup.operation,
+                        text: oGroup.operation + (oGroup.operationDescription ? " - " + oGroup.operationDescription : ""),
+                        icon: "sap-icon://action-settings",
+                        type: "operation",
+                        componentCount: aComponentNodes.length,
+                        expanded: true,
+                        nodes: aComponentNodes
+                    });
+                }
+            });
+
             var aHierarchy = [{
                 id: "root",
                 text: sSfc,
                 icon: "sap-icon://product",
                 type: "sfc",
                 expanded: true,
-                nodes: Object.values(oGroupedByOperation).map(function (oGroup) {
-                    return {
-                        id: "op_" + oGroup.operation,
-                        text: oGroup.operation + (oGroup.operationDescription ? " - " + oGroup.operationDescription : ""),
-                        icon: "sap-icon://action-settings",
-                        type: "operation",
-                        componentCount: oGroup.components.length,
-                        expanded: true,
-                        nodes: oGroup.components.map(function (oComp) {
-                            return {
-                                id: "comp_" + oComp.id,
-                                text: oComp.component + (oComp.description ? " - " + oComp.description : ""),
-                                icon: "sap-icon://inventory",
-                                type: "component",
-                                componentData: oComp,
-                                expanded: false,
-                                nodes: oComp.assemblyDataFields.map(function (oField, idx) {
-                                    return {
-                                        id: "field_" + oComp.id + "_" + idx,
-                                        text: (oField.fieldName || oField.name) + ": " + (oField.fieldValue || oField.value || ""),
-                                        icon: "sap-icon://tag",
-                                        type: "dataField"
-                                    };
-                                })
-                            };
-                        })
-                    };
-                })
+                nodes: aOperationNodes.length > 0 ? aOperationNodes : undefined
             }];
 
             return aHierarchy;
@@ -438,6 +597,61 @@ sap.ui.define([
         },
 
         /**
+         * Show data fields popover
+         */
+        onDataFieldsPress: function (oEvent) {
+            var oButton = oEvent.getSource();
+            var oContext = oButton.getBindingContext("genealogy");
+            if (!oContext) return;
+
+            var oComponent = oContext.getObject();
+            var aDataFields = oComponent.assemblyDataFields || [];
+            
+            if (aDataFields.length === 0) {
+                MessageToast.show("No data fields available");
+                return;
+            }
+
+            // Create popover dynamically
+            if (this._oDataFieldsPopover) {
+                this._oDataFieldsPopover.destroy();
+            }
+
+            var oList = new sap.m.List({
+                items: aDataFields.map(function (oField) {
+                    var sFieldName = oField.fieldName || oField.name || "";
+                    var sFieldValue = oField.fieldValue || oField.value || "";
+                    return new sap.m.StandardListItem({
+                        title: sFieldName,
+                        description: sFieldValue,
+                        icon: "sap-icon://tag"
+                    });
+                })
+            });
+
+            this._oDataFieldsPopover = new sap.m.Popover({
+                title: "Assembly Data Fields",
+                placement: "Auto",
+                contentWidth: "300px",
+                content: [oList],
+                footer: new sap.m.Toolbar({
+                    content: [
+                        new sap.m.ToolbarSpacer(),
+                        new sap.m.Button({
+                            text: "Close",
+                            press: function () {
+                                this._oDataFieldsPopover.close();
+                            }.bind(this)
+                        })
+                    ]
+                })
+            });
+
+            this.getView().addDependent(this._oDataFieldsPopover);
+            this._oDataFieldsPopover.openBy(oButton);
+        },
+
+        /**
          * Export to CSV
          */
         onExportPress: function () {
@@ -504,24 +718,73 @@ sap.ui.define([
         },
 
         /**
-         * Filter tree items
+         * Handle table row press - show component details
+         */
+        onComponentRowPress: function (oEvent) {
+            var oItem = oEvent.getSource();
+            var oContext = oItem.getBindingContext("genealogy");
+            if (oContext) {
+                var oComponent = oContext.getObject();
+                this._showComponentDetails(oComponent);
+            }
+        },
+
+        /**
+         * Filter all views
          */
         onFilterChange: function (oEvent) {
             var sQuery = oEvent.getParameter("newValue").toLowerCase();
-            var oTree = this.byId("genealogyTree");
             
-            if (!oTree) return;
+            // Filter for both lists
+            var oFilter = null;
+            if (sQuery) {
+                oFilter = new sap.ui.model.Filter({
+                    filters: [
+                        new sap.ui.model.Filter("component", sap.ui.model.FilterOperator.Contains, sQuery),
+                        new sap.ui.model.Filter("description", sap.ui.model.FilterOperator.Contains, sQuery),
+                        new sap.ui.model.Filter("batchNumber", sap.ui.model.FilterOperator.Contains, sQuery)
+                    ],
+                    and: false
+                });
+            }
 
-            var aItems = oTree.getItems();
-            aItems.forEach(function (oItem) {
-                var oContext = oItem.getBindingContext("genealogy");
-                if (oContext) {
-                    var oData = oContext.getObject();
-                    var sText = (oData.text || "").toLowerCase();
-                    var bVisible = !sQuery || sText.indexOf(sQuery) !== -1;
-                    oItem.setVisible(bVisible);
+            // Filter Components Table
+            var oTable = this.byId("componentsTable");
+            if (oTable) {
+                var oTableBinding = oTable.getBinding("items");
+                if (oTableBinding) {
+                    oTableBinding.filter(oFilter ? [oFilter] : []);
                 }
-            });
+            }
+
+            // Filter Components List (hierarchy)
+            var oList = this.byId("componentsList");
+            if (oList) {
+                var oListBinding = oList.getBinding("items");
+                if (oListBinding) {
+                    oListBinding.filter(oFilter ? [oFilter] : []);
+                }
+            }
+
+            // Rebuild Visual Hierarchy with filtered data
+            var oModel = this.getView().getModel("genealogy");
+            var aComponents = oModel.getProperty("/components") || [];
+            var sSfc = oModel.getProperty("/sfc");
+            
+            if (sQuery) {
+                // Filter components for visual chart
+                var aFilteredComponents = aComponents.filter(function (oComp) {
+                    var sComponent = (oComp.component || "").toLowerCase();
+                    var sDescription = (oComp.description || "").toLowerCase();
+                    var sBatchNumber = (oComp.batchNumber || "").toLowerCase();
+                    return sComponent.indexOf(sQuery) !== -1 || 
+                           sDescription.indexOf(sQuery) !== -1 || 
+                           sBatchNumber.indexOf(sQuery) !== -1;
+                });
+                this._buildVisualChart(aFilteredComponents, sSfc);
+            } else {
+                this._buildVisualChart(aComponents, sSfc);
+            }
         },
 
         /**

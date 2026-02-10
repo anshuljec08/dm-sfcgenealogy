@@ -1,207 +1,100 @@
-# SFC Genealogy Plugin
+# SFC Genealogy Plugin for SAP Digital Manufacturing
 
-A beautiful, modern POD plugin for SAP Digital Manufacturing that displays the **complete genealogy of assembled components** for a given SFC, including all assembly data fields.
+A custom POD plugin for SAP Digital Manufacturing that displays the genealogy (assembled components) of a Shop Floor Control (SFC).
 
-![SFC Genealogy](https://img.shields.io/badge/SAP-Digital%20Manufacturing-blue)
-![Version](https://img.shields.io/badge/version-1.0.0-green)
-![License](https://img.shields.io/badge/license-MIT-blue)
+## Features
 
-## ✨ Features
+- **Component Hierarchy View**: Flat list showing all assembled components with key information
+- **Components Summary Table**: Detailed table view with all component data
+- **Visual Hierarchy Chart**: Graphical tree visualization of SFC and its components
+- **Data Fields Popover**: Click to view assembly data fields for each component
+- **Component Details Dialog**: Full details dialog when clicking on a component
+- **Search/Filter**: Filter all views by component name, description, or batch number
+- **Export to CSV**: Download component data as CSV file
+- **Responsive Design**: Works on desktop and tablet devices
 
-### Hierarchical Genealogy View
-- **Tree View** showing SFC → Operations → Components → Data Fields hierarchy
-- **Color-coded levels** for easy visual distinction
-- Expandable/collapsible nodes
+## Installation
 
-### Component Summary Table
-- Complete list of assembled components
-- Component, Description, Operation, Quantity, UoM
-- Batch Number, Serial Number
-- Assembly Data Fields count
-- Assembled Date/Time
+1. Download or clone this repository
+2. Zip all files (not the folder, just the contents)
+3. Upload to SAP Digital Manufacturing POD Designer as a custom plugin
 
-### Component Details Dialog
-- **General Information**: Component, Version, Description, Operation, Sequence, Quantity
-- **Traceability**: Batch Number, Serial Number, Vendor Batch, SFC Assembled
-- **Assembly Data Fields**: Complete list of custom data fields with values
+## Usage
 
-### Modern UI Features
-- 🎨 Beautiful gradient styling with SAP Fiori design
-- 📱 Responsive design for all screen sizes
-- 🔍 Search/filter functionality
-- 📊 Export to CSV
-- 🔄 Auto-refresh on SFC selection change
+1. Add the plugin to a POD layout in POD Designer
+2. Select an SFC from the worklist
+3. Select an operation from the operation list (required)
+4. The plugin will display all assembled components for that SFC at the selected operation
 
-## 📁 Project Structure
+## Views
+
+### Component Hierarchy
+- Collapsible panel showing components in a flat list
+- Shows component name, description, quantity, unit of measure, and batch number
+- Click on any row to open the details dialog
+
+### Components Summary
+- Detailed table with columns:
+  - #: Row number
+  - Component: Material number and version
+  - Description: Component description
+  - Operation: Assembly operation
+  - Quantity: Assembled quantity
+  - UoM: Unit of measure
+  - Batch Number: Batch/lot number if available
+  - Serial Number: Serial number if available
+  - Data Fields: Click to view assembly data fields in a popover
+  - Assembled Date/Time: When the component was assembled
+
+### Visual Hierarchy
+- Graphical tree showing SFC at the top with all components below
+- Each component shows name and quantity
+- Click on any component to open the details dialog
+- Collapsed by default to save space
+
+## API
+
+This plugin uses the SAP DM Assembly API:
+- Endpoint: `/assembly/v1/assembledComponents`
+- Parameters: `plant`, `sfc`, `operationActivity`
+
+## Files Structure
 
 ```
 sfcGenealogy/
-├── Component.js                    # Main component
-├── manifest.json                   # Application manifest
-├── builder/
-│   └── PropertyEditor.js           # POD Designer configuration
+├── Component.js              # UI5 Component definition
+├── manifest.json             # Application manifest
 ├── controller/
-│   └── MainView.controller.js      # Main controller with API calls
+│   └── MainView.controller.js  # Main controller logic
 ├── view/
-│   ├── MainView.view.xml           # Main view with Tree & Table
-│   └── ComponentDetailsDialog.fragment.xml  # Details popup
-├── css/
-│   └── style.css                   # Custom styling
+│   ├── MainView.view.xml       # Main view
+│   └── ComponentDetailsDialog.fragment.xml  # Details dialog
 ├── designer/
-│   └── components.json             # Plugin registration
+│   └── components.json         # POD Designer configuration
+├── builder/
+│   └── PropertyEditor.js       # Property editor for POD Designer
 ├── i18n/
-│   ├── i18n.properties             # Runtime translations
-│   ├── i18n_en.properties
-│   ├── builder.properties          # POD Designer translations
-│   └── builder_en.properties
-└── README.md
+│   ├── i18n.properties         # Internationalization texts
+│   ├── i18n_en.properties      # English texts
+│   ├── builder.properties      # Builder texts
+│   └── builder_en.properties   # Builder English texts
+└── css/
+    └── style.css               # Custom styles
 ```
 
-## 🔧 Configuration
+## Dependencies
 
-### designer/components.json
+- SAP UI5
+- SAP Digital Manufacturing POD Foundation
 
-The plugin is configured for **CUSTOMPOD1** at **plant 1710**:
+## License
 
-```json
-{
-    "components": [
-        {
-            "id": "sfcGenealogyPlugin",
-            "type": "VIEW_PLUGIN",
-            "name": "sap.dm.custom.plugin.sfcGenealogy",
-            "supportedPodTypes": ["WORK_CENTER", "OPERATION", "ORDER", "OTHER", "MONITOR"]
-        }
-    ]
-}
-```
+MIT License
 
-## 🔌 API Integration
+## Author
 
-The plugin calls the SAP DM Assembly API:
+Manoel Franklin
 
-**Endpoint:** `GET /assembly/v1/assembledComponents`
+## Version
 
-**Parameters:**
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| plant | Yes | Plant code |
-| sfc | Yes | SFC number |
-| operation | No | Filter by operation |
-
-**API Documentation:** [SAP API Business Hub - Assembly API](https://api.sap.com/api/sapdme_assembly/path/get_assembledComponents)
-
-## 🚀 Deployment
-
-### Step 1: Prepare ZIP
-
-Rename the folder to `sfcGenealogy` to match the namespace.
-
-### Step 2: ZIP Structure
-
-```
-sfcGenealogy.zip
-└── sfcGenealogy/
-    ├── Component.js
-    ├── manifest.json
-    ├── builder/
-    ├── controller/
-    ├── view/
-    ├── css/
-    ├── designer/
-    └── i18n/
-```
-
-### Step 3: Upload
-
-1. Go to **POD Designer** > **Custom Plugins**
-2. Click **Upload** and select the ZIP file
-3. Add the plugin to your POD layout
-
-## 🎨 Visual Styling
-
-### Color Palette
-
-| Level | Color | Hex Code |
-|-------|-------|----------|
-| SFC (Root) | Blue | `#0854a0` |
-| Operation | Teal | `#107e7d` |
-| Component | Green | `#27ae60` |
-| Data Field | Purple | `#9b59b6` |
-
-### Tree View Indicators
-- **Blue left border** - SFC root node
-- **Teal left border** - Operation nodes
-- **Green left border** - Component nodes
-- **Purple left border** - Data field nodes
-
-## 📋 Data Fields Displayed
-
-The plugin extracts and displays these fields from each component:
-
-| Field | Source |
-|-------|--------|
-| Component | `component` / `material` |
-| Version | `componentVersion` / `materialVersion` |
-| Description | `componentDescription` / `description` |
-| Operation | `operation` / `assembledAtOperation` |
-| Quantity | `quantityAssembled` / `assembledQty` |
-| Unit of Measure | `unitOfMeasure` / `uom` |
-| Batch Number | `batchNumber` / assemblyDataFields["BATCH"] |
-| Serial Number | `serialNumber` / assemblyDataFields["SERIAL"] |
-| Assembled DateTime | `assembledDateTime` / `createdDateTime` |
-| Assembled By | `assembledBy` / `userId` |
-
-### Assembly Data Fields
-
-All custom assembly data fields are displayed with:
-- Field Name
-- Field Value
-
-## 🛠️ Technical Details
-
-### Namespace
-```
-sap.dm.custom.plugin.sfcGenealogy
-```
-
-### Base Classes
-| File | Extends |
-|------|---------|
-| Component.js | `ProductionUIComponent` |
-| MainView.controller.js | `PluginViewController` |
-| PropertyEditor.js | `PropertyEditor` |
-
-### Events Subscribed
-- `PodSelectionChangeEvent` - Refresh on SFC change
-- `WorklistSelectEvent` - Refresh on worklist selection
-- `OperationListSelectEvent` - Refresh on operation change
-
-### Dependencies
-- `sap.ui.core`
-- `sap.m`
-- `sap.f` (Cards)
-- `sap.ui.layout`
-
-## 🐛 Debugging
-
-View console logs for debugging:
-
-```javascript
-// In MainView.controller.js
-var oLogger = Log.getLogger("sfcGenealogy", Log.Level.INFO);
-```
-
-Console output prefix: `sfcGenealogy`
-
-## 📝 License
-
-MIT License - Feel free to use and modify.
-
-## 👤 Author
-
-SAP Digital Manufacturing Custom Plugin Development
-
----
-
-*Last Updated: February 2026*
+1.0.0

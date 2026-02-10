@@ -22,7 +22,7 @@
                     <core:Icon 
                         src="sap-icon://inventory" 
                         size="2.5rem" 
-                        color="#0854a0"
+                        color="#333333"
                         class="sapUiSmallMarginEnd" />
                     <VBox>
                         <Title text="{details>/component}" level="H3" />
