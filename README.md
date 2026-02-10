@@ -35,6 +35,7 @@ A custom POD plugin for SAP Digital Manufacturing that displays the genealogy (a
 ### Component Hierarchy
 
 <img width="1897" height="493" alt="image" src="https://github.com/user-attachments/assets/d5aff6a1-12a3-4838-bd6b-75d0ad1c935f" />
+<img width="1915" height="1076" alt="image" src="https://github.com/user-attachments/assets/43d3bc16-d8ec-45fc-99c6-fe017c088966" />
 
 - Collapsible panel showing components in a flat list
 - Shows component name, description, quantity, unit of measure, and batch number
