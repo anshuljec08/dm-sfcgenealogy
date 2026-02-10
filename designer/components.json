@@ -1,0 +1,15 @@
+{
+    "components": [
+        {
+            "id": "sfcGenealogyPlugin",
+            "type": "VIEW_PLUGIN",
+            "allowMultipleInstances": false,
+            "name": "sap.dm.custom.plugin.sfcGenealogy",
+            "propertyEditor": "sap.dm.custom.plugin.sfcGenealogy.builder.PropertyEditor",
+            "i18n": "sap.dm.custom.plugin.sfcGenealogy.i18n.i18n",
+            "productionProcessEnabled": true,
+            "productionProcessTitle": "SFC Genealogy",
+            "supportedPodTypes": ["WORK_CENTER", "OPERATION", "ORDER", "OTHER", "MONITOR"]
+        }
+    ]
+}

@@ -1,0 +1,288 @@
+/**
+ * SFC Genealogy Plugin - Custom Styles
+ * 
+ * Modern, clean styling for the genealogy viewer
+ */
+
+/* ============================================
+   Main Card Styling
+   ============================================ */
+
+.sfcGenealogyCard {
+    border-radius: 12px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
+}
+
+.sfcGenealogyCard .sapFCardHeader {
+    background: linear-gradient(135deg, #0854a0 0%, #0a6ed1 100%) !important;
+    color: white !important;
+    border-radius: 12px 12px 0 0 !important;
+    padding: 1rem 1.5rem !important;
+}
+
+.sfcGenealogyCard .sapFCardHeader .sapFCardHeaderTitle,
+.sfcGenealogyCard .sapFCardHeader .sapFCardHeaderSubtitle,
+.sfcGenealogyCard .sapFCardHeader .sapFCardHeaderStatus {
+    color: white !important;
+}
+
+.sfcGenealogyCard .sapFCardHeader .sapUiIcon {
+    color: white !important;
+}
+
+/* ============================================
+   Toolbar Styling
+   ============================================ */
+
+.sfcGenealogyToolbar {
+    background: linear-gradient(180deg, #f5f6f7 0%, #ffffff 100%) !important;
+    border-bottom: 1px solid #e5e5e5 !important;
+    padding: 0.5rem 1rem !important;
+}
+
+.sfcGenealogyToolbar .sapMSF {
+    border-radius: 20px !important;
+    background-color: white !important;
+    border: 1px solid #d9d9d9 !important;
+}
+
+.sfcGenealogyToolbar .sapMSF:focus-within {
+    border-color: #0854a0 !important;
+    box-shadow: 0 0 0 2px rgba(8, 84, 160, 0.15) !important;
+}
+
+/* ============================================
+   No Data State
+   ============================================ */
+
+.sfcGenealogyNoData {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    padding: 3rem;
+}
+
+.sfcGenealogyNoData .sapUiIcon {
+    opacity: 0.5;
+}
+
+/* ============================================
+   Tree Styling
+   ============================================ */
+
+.sfcGenealogyTree {
+    padding: 0.5rem 1rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.sfcGenealogyTree .sapMTreeItemBase {
+    border-radius: 8px;
+    margin: 2px 0;
+    transition: all 0.2s ease;
+}
+
+.sfcGenealogyTree .sapMTreeItemBase:hover {
+    background-color: rgba(8, 84, 160, 0.05) !important;
+}
+
+/* SFC Root Item */
+.sfcGenealogyTreeItemSfc {
+    background: linear-gradient(135deg, rgba(8, 84, 160, 0.1) 0%, rgba(10, 110, 209, 0.08) 100%) !important;
+    border-left: 4px solid #0854a0 !important;
+    font-weight: 600 !important;
+}
+
+.sfcGenealogyTreeItemSfc .sapMTreeItemBaseContentArrow .sapUiIcon,
+.sfcGenealogyTreeItemSfc .sapMSTI .sapUiIcon {
+    color: #0854a0 !important;
+}
+
+/* Operation Item */
+.sfcGenealogyTreeItemOperation {
+    background: linear-gradient(135deg, rgba(16, 126, 125, 0.08) 0%, rgba(16, 126, 125, 0.04) 100%) !important;
+    border-left: 4px solid #107e7d !important;
+}
+
+.sfcGenealogyTreeItemOperation .sapMTreeItemBaseContentArrow .sapUiIcon,
+.sfcGenealogyTreeItemOperation .sapMSTI .sapUiIcon {
+    color: #107e7d !important;
+}
+
+/* Component Item */
+.sfcGenealogyTreeItemComponent {
+    background: linear-gradient(135deg, rgba(46, 204, 113, 0.08) 0%, rgba(39, 174, 96, 0.04) 100%) !important;
+    border-left: 4px solid #27ae60 !important;
+}
+
+.sfcGenealogyTreeItemComponent .sapMTreeItemBaseContentArrow .sapUiIcon,
+.sfcGenealogyTreeItemComponent .sapMSTI .sapUiIcon {
+    color: #27ae60 !important;
+}
+
+/* Data Field Item */
+.sfcGenealogyTreeItemDataField {
+    background: rgba(155, 89, 182, 0.05) !important;
+    border-left: 4px solid #9b59b6 !important;
+    font-size: 0.875rem !important;
+}
+
+.sfcGenealogyTreeItemDataField .sapMTreeItemBaseContentArrow .sapUiIcon,
+.sfcGenealogyTreeItemDataField .sapMSTI .sapUiIcon {
+    color: #9b59b6 !important;
+}
+
+/* ============================================
+   Summary Panel & Table
+   ============================================ */
+
+.sfcGenealogySummaryPanel {
+    border-radius: 8px !important;
+    margin: 0 1rem 1rem 1rem !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+}
+
+.sfcGenealogySummaryPanel .sapMPanelHdr {
+    background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%) !important;
+    border-bottom: 1px solid #e5e5e5 !important;
+}
+
+.sfcGenealogyTable {
+    border-radius: 8px;
+}
+
+.sfcGenealogyTable .sapMListTbl thead {
+    background: linear-gradient(180deg, #f5f6f7 0%, #e9ecef 100%) !important;
+}
+
+.sfcGenealogyTable .sapMListTblHeaderCell {
+    font-weight: 600 !important;
+    color: #354a5f !important;
+}
+
+.sfcGenealogyTable .sapMListTblRow:hover {
+    background-color: rgba(8, 84, 160, 0.04) !important;
+}
+
+.sfcGenealogyRowNumber {
+    font-size: 0.875rem !important;
+}
+
+.sfcGenealogyComponentName {
+    font-weight: 600 !important;
+    color: #0854a0 !important;
+}
+
+.sfcGenealogyVersion {
+    font-size: 0.75rem !important;
+    color: #6a6d70 !important;
+}
+
+.sfcGenealogyBatch {
+    font-family: "Courier New", monospace !important;
+    font-size: 0.875rem !important;
+    color: #107e7d !important;
+}
+
+.sfcGenealogySerial {
+    font-family: "Courier New", monospace !important;
+    font-size: 0.75rem !important;
+    color: #9b59b6 !important;
+}
+
+/* ============================================
+   Details Dialog
+   ============================================ */
+
+.sfcGenealogyDetailsDialog {
+    border-radius: 12px !important;
+}
+
+.sfcGenealogyDetailsDialog .sapMDialogTitle {
+    background: linear-gradient(135deg, #0854a0 0%, #0a6ed1 100%) !important;
+    color: white !important;
+}
+
+.sfcGenealogyDetailsHeader {
+    padding: 1rem;
+    background: linear-gradient(135deg, rgba(8, 84, 160, 0.05) 0%, rgba(10, 110, 209, 0.02) 100%);
+    border-radius: 8px;
+}
+
+.sfcGenealogyDetailsPanel {
+    border-radius: 8px !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05) !important;
+}
+
+.sfcGenealogyDetailsPanel .sapMPanelHdr {
+    background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%) !important;
+    font-weight: 600 !important;
+    color: #354a5f !important;
+}
+
+.sfcGenealogyDataFieldsTable {
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.sfcGenealogyDataFieldsTable .sapMListTblHeaderCell {
+    font-weight: 600 !important;
+    background-color: #f5f6f7 !important;
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+
+@keyframes sfcGenealogyFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.sfcGenealogyTree,
+.sfcGenealogySummaryPanel {
+    animation: sfcGenealogyFadeIn 0.3s ease-out;
+}
+
+/* ============================================
+   Responsive Adjustments
+   ============================================ */
+
+@media (max-width: 600px) {
+    .sfcGenealogyCard .sapFCardHeader {
+        padding: 0.75rem 1rem !important;
+    }
+    
+    .sfcGenealogyToolbar {
+        flex-wrap: wrap;
+        padding: 0.5rem !important;
+    }
+    
+    .sfcGenealogyTree {
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .sfcGenealogySummaryPanel {
+        margin: 0 0.5rem 0.5rem 0.5rem !important;
+    }
+}
+
+/* ============================================
+   Print Styles
+   ============================================ */
+
+@media print {
+    .sfcGenealogyToolbar {
+        display: none !important;
+    }
+    
+    .sfcGenealogyCard {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+    }
+}

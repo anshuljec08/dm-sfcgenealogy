@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:f="sap.f"
+    xmlns:l="sap.ui.layout">
+
+    <Dialog
+        id="componentDetailsDialog"
+        title="{i18n>componentDetails}"
+        contentWidth="700px"
+        contentHeight="auto"
+        draggable="true"
+        resizable="true"
+        class="sfcGenealogyDetailsDialog">
+        
+        <content>
+            <VBox class="sapUiSmallMargin">
+                
+                <!-- Component Header -->
+                <HBox class="sfcGenealogyDetailsHeader sapUiMediumMarginBottom" alignItems="Center">
+                    <core:Icon 
+                        src="sap-icon://inventory" 
+                        size="2.5rem" 
+                        color="#0854a0"
+                        class="sapUiSmallMarginEnd" />
+                    <VBox>
+                        <Title text="{details>/component}" level="H3" />
+                        <Text text="{details>/description}" class="sapUiTinyMarginTop" />
+                    </VBox>
+                </HBox>
+
+                <!-- Main Details -->
+                <Panel 
+                    headerText="{i18n>generalInformation}" 
+                    expandable="true" 
+                    expanded="true"
+                    class="sfcGenealogyDetailsPanel">
+                    <content>
+                        <l:Grid defaultSpan="XL6 L6 M6 S12" class="sapUiSmallMargin">
+                            <l:content>
+                                <VBox class="sapUiSmallMarginBottom">
+                                    <Label text="{i18n>component}" design="Bold" />
+                                    <Text text="{details>/component}" />
+                                </VBox>
+                                <VBox class="sapUiSmallMarginBottom">
+                                    <Label text="{i18n>version}" design="Bold" />
+                                    <Text text="{details>/componentVersion}" />
+                                </VBox>
+                                <VBox class="sapUiSmallMarginBottom">
+                                    <Label text="{i18n>description}" design="Bold" />
+                                    <Text text="{details>/description}" />
+                                </VBox>
+                                <VBox class="sapUiSmallMarginBottom">
+                                    <Label text="{i18n>operation}" design="Bold" />
+                                    <Text text="{details>/operation}" />
+                                </VBox>
+                                <VBox class="sapUiSmallMarginBottom">
+                                    <Label text="{i18n>sequence}" design="Bold" />
+                                    <Text text="{details>/sequence}" />
+                                </VBox>
+                                <VBox class="sapUiSmallMarginBottom">
+                                    <Label text="{i18n>quantityAssembled}" design="Bold" />
+                                    <ObjectNumber 
+                                        number="{details>/quantityAssembled}" 
+                                        unit="{details>/unitOfMeasure}"
+                                        emphasized="true"
+                                        state="Success" />
+                                </VBox>
+                            </l:content>
+                        </l:Grid>
+                    </content>
+                </Panel>
+
+                <!-- Traceability Information -->
+                <Panel 
+                    headerText="{i18n>traceabilityInformation}" 
+                    expandable="true" 
+                    expanded="true"
+                    class="sfcGenealogyDetailsPanel sapUiSmallMarginTop">
+                    <content>
+                        <l:Grid defaultSpan="XL6 L6 M6 S12" class="sapUiSmallMargin">
+                            <l:content>
+                                <VBox class="sapUiSmallMarginBottom">
+                                    <Label text="{i18n>batchNumber}" design="Bold" />
+                                    <Text text="{= ${details>/batchNumber} || '-'}" />
+                                </VBox>
+                                <VBox class="sapUiSmallMarginBottom">
+                                    <Label text="{i18n>serialNumber}" design="Bold" />
+                                    <Text text="{= ${details>/serialNumber} || '-'}" />
+                                </VBox>
+                                <VBox class="sapUiSmallMarginBottom">
+                                    <Label text="{i18n>vendorBatchNumber}" design="Bold" />
+                                    <Text text="{= ${details>/vendorBatchNumber} || '-'}" />
+                                </VBox>
+                                <VBox class="sapUiSmallMarginBottom">
+                                    <Label text="{i18n>sfcAssembled}" design="Bold" />
+                                    <Text text="{= ${details>/sfcAssembled} || '-'}" />
+                                </VBox>
+                                <VBox class="sapUiSmallMarginBottom">
+                                    <Label text="{i18n>assembledDateTime}" design="Bold" />
+                                    <Text text="{details>/assembledDateTime}" />
+                                </VBox>
+                                <VBox class="sapUiSmallMarginBottom">
+                                    <Label text="{i18n>assembledBy}" design="Bold" />
+                                    <Text text="{= ${details>/assembledBy} || '-'}" />
+                                </VBox>
+                            </l:content>
+                        </l:Grid>
+                    </content>
+                </Panel>
+
+                <!-- Assembly Data Fields -->
+                <Panel 
+                    headerText="{i18n>assemblyDataFields}" 
+                    expandable="true" 
+                    expanded="true"
+                    visible="{details>/hasDataFields}"
+                    class="sfcGenealogyDetailsPanel sapUiSmallMarginTop">
+                    <content>
+                        <Table
+                            items="{details>/assemblyDataFields}"
+                            alternateRowColors="true"
+                            class="sfcGenealogyDataFieldsTable">
+                            <columns>
+                                <Column width="40%">
+                                    <Text text="{i18n>fieldName}" />
+                                </Column>
+                                <Column width="60%">
+                                    <Text text="{i18n>fieldValue}" />
+                                </Column>
+                            </columns>
+                            <items>
+                                <ColumnListItem>
+                                    <cells>
+                                        <ObjectStatus
+                                            text="{= ${details>fieldName} || ${details>name}}"
+                                            icon="sap-icon://tag"
+                                            state="Information" />
+                                        <Text text="{= ${details>fieldValue} || ${details>value} || '-'}" />
+                                    </cells>
+                                </ColumnListItem>
+                            </items>
+                        </Table>
+                    </content>
+                </Panel>
+
+            </VBox>
+        </content>
+
+        <beginButton>
+            <Button
+                text="{i18n>close}"
+                type="Emphasized"
+                press="onCloseDetailsDialog" />
+        </beginButton>
+    </Dialog>
+</core:FragmentDefinition>

@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mvc:View
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:f="sap.f"
+    xmlns:l="sap.ui.layout"
+    xmlns:core="sap.ui.core"
+    controllerName="sap.dm.custom.plugin.sfcGenealogy.controller.MainView"
+    height="100%">
+
+    <f:Card class="sapUiSmallMargin sfcGenealogyCard" height="100%">
+        <!-- Card Header -->
+        <f:header>
+            <f:cards:Header
+                xmlns:f.cards="sap.f.cards"
+                title="{i18n>pluginTitle}"
+                subtitle="{= ${genealogy>/sfc} ? 'SFC: ' + ${genealogy>/sfc} : 'Select an SFC to view genealogy'}"
+                iconSrc="sap-icon://tree"
+                statusText="{= ${genealogy>/totalComponents} + ' components'}" />
+        </f:header>
+
+        <!-- Card Content -->
+        <f:content>
+            <VBox height="100%" class="sapUiNoMargin">
+                
+                <!-- Toolbar -->
+                <Toolbar class="sfcGenealogyToolbar">
+                    <SearchField
+                        id="searchField"
+                        placeholder="{i18n>searchPlaceholder}"
+                        width="15rem"
+                        liveChange="onFilterChange"
+                        class="sapUiTinyMarginEnd" />
+                    
+                    <ToolbarSpacer />
+                    
+                    <Label text="{i18n>lastRefresh}:" class="sapUiTinyMarginEnd" />
+                    <Text text="{genealogy>/lastRefresh}" class="sapUiTinyMarginEnd" />
+                    
+                    <ToolbarSeparator />
+                    
+                    <Button
+                        icon="sap-icon://expand-all"
+                        tooltip="{i18n>expandAll}"
+                        press="onExpandAll"
+                        type="Transparent" />
+                    <Button
+                        icon="sap-icon://collapse-all"
+                        tooltip="{i18n>collapseAll}"
+                        press="onCollapseAll"
+                        type="Transparent" />
+                    
+                    <ToolbarSeparator />
+                    
+                    <Button
+                        icon="sap-icon://excel-attachment"
+                        tooltip="{i18n>export}"
+                        press="onExportPress"
+                        type="Transparent"
+                        enabled="{genealogy>/hasData}" />
+                    <Button
+                        icon="sap-icon://refresh"
+                        tooltip="{i18n>refresh}"
+                        press="onRefreshPress"
+                        type="Transparent" />
+                    <Button
+                        id="closeButton"
+                        icon="sap-icon://decline"
+                        tooltip="{i18n>close}"
+                        press="onClosePress"
+                        type="Transparent"
+                        visible="false" />
+                </Toolbar>
+
+                <!-- Loading Indicator -->
+                <FlexBox
+                    visible="{genealogy>/isLoading}"
+                    height="100%"
+                    alignItems="Center"
+                    justifyContent="Center">
+                    <BusyIndicator size="L" text="{i18n>loading}" />
+                </FlexBox>
+
+                <!-- No Data Message -->
+                <FlexBox
+                    visible="{= !${genealogy>/isLoading} &amp;&amp; !${genealogy>/hasData} &amp;&amp; !${genealogy>/sfc}}"
+                    height="100%"
+                    direction="Column"
+                    alignItems="Center"
+                    justifyContent="Center"
+                    class="sfcGenealogyNoData">
+                    <core:Icon
+                        src="sap-icon://product"
+                        size="4rem"
+                        color="#bfbfbf"
+                        class="sapUiMediumMarginBottom" />
+                    <Title text="{i18n>noSfcSelected}" level="H3" titleStyle="H4" />
+                    <Text text="{i18n>noSfcSelectedDescription}" class="sapUiSmallMarginTop" />
+                </FlexBox>
+
+                <!-- No Components Message -->
+                <FlexBox
+                    visible="{= !${genealogy>/isLoading} &amp;&amp; !${genealogy>/hasData} &amp;&amp; ${genealogy>/sfc}}"
+                    height="100%"
+                    direction="Column"
+                    alignItems="Center"
+                    justifyContent="Center"
+                    class="sfcGenealogyNoData">
+                    <core:Icon
+                        src="sap-icon://inventory"
+                        size="4rem"
+                        color="#bfbfbf"
+                        class="sapUiMediumMarginBottom" />
+                    <Title text="{i18n>noComponentsFound}" level="H3" titleStyle="H4" />
+                    <Text text="{i18n>noComponentsFoundDescription}" class="sapUiSmallMarginTop" />
+                </FlexBox>
+
+                <!-- Tree View -->
+                <Tree
+                    id="genealogyTree"
+                    visible="{= !${genealogy>/isLoading} &amp;&amp; ${genealogy>/hasData}}"
+                    items="{
+                        path: 'genealogy>/hierarchyData',
+                        templateShareable: false
+                    }"
+                    selectionChange="onTreeItemSelect"
+                    class="sfcGenealogyTree sapUiSmallMarginTop">
+                    <items>
+                        <StandardTreeItem
+                            title="{genealogy>text}"
+                            icon="{genealogy>icon}"
+                            type="Active"
+                            class="{= ${genealogy>type} === 'sfc' ? 'sfcGenealogyTreeItemSfc' : 
+                                    ${genealogy>type} === 'operation' ? 'sfcGenealogyTreeItemOperation' : 
+                                    ${genealogy>type} === 'component' ? 'sfcGenealogyTreeItemComponent' : 
+                                    'sfcGenealogyTreeItemDataField'}" />
+                    </items>
+                </Tree>
+
+                <!-- Summary Panel -->
+                <Panel
+                    visible="{= !${genealogy>/isLoading} &amp;&amp; ${genealogy>/hasData}}"
+                    class="sfcGenealogySummaryPanel sapUiSmallMarginTop"
+                    expandable="false"
+                    expanded="true">
+                    <headerToolbar>
+                        <Toolbar>
+                            <Title text="{i18n>componentsSummary}" />
+                        </Toolbar>
+                    </headerToolbar>
+                    <content>
+                        <Table
+                            id="componentsTable"
+                            items="{genealogy>/components}"
+                            mode="SingleSelectMaster"
+                            growing="true"
+                            growingThreshold="50"
+                            alternateRowColors="true"
+                            class="sfcGenealogyTable">
+                            <columns>
+                                <Column width="3rem" hAlign="Center">
+                                    <Text text="#" />
+                                </Column>
+                                <Column width="12rem">
+                                    <Text text="{i18n>component}" />
+                                </Column>
+                                <Column width="15rem" minScreenWidth="Tablet" demandPopin="true">
+                                    <Text text="{i18n>description}" />
+                                </Column>
+                                <Column width="8rem" minScreenWidth="Tablet" demandPopin="true">
+                                    <Text text="{i18n>operation}" />
+                                </Column>
+                                <Column width="6rem" hAlign="End">
+                                    <Text text="{i18n>quantity}" />
+                                </Column>
+                                <Column width="5rem" hAlign="Center" minScreenWidth="Tablet" demandPopin="true">
+                                    <Text text="{i18n>uom}" />
+                                </Column>
+                                <Column width="10rem" minScreenWidth="Desktop" demandPopin="true">
+                                    <Text text="{i18n>batchNumber}" />
+                                </Column>
+                                <Column width="8rem" minScreenWidth="Desktop" demandPopin="true">
+                                    <Text text="{i18n>dataFields}" />
+                                </Column>
+                                <Column width="12rem" minScreenWidth="Desktop" demandPopin="true">
+                                    <Text text="{i18n>assembledDateTime}" />
+                                </Column>
+                            </columns>
+                            <items>
+                                <ColumnListItem type="Navigation" press="onComponentRowPress">
+                                    <cells>
+                                        <ObjectNumber
+                                            number="{genealogy>id}"
+                                            state="Information"
+                                            class="sfcGenealogyRowNumber" />
+                                        <VBox>
+                                            <Text text="{genealogy>component}" class="sfcGenealogyComponentName" />
+                                            <Text text="{genealogy>componentVersion}" class="sapUiTinyMarginTop sfcGenealogyVersion" />
+                                        </VBox>
+                                        <Text text="{genealogy>description}" wrapping="true" />
+                                        <ObjectStatus
+                                            text="{genealogy>operation}"
+                                            icon="sap-icon://action-settings"
+                                            state="Information" />
+                                        <ObjectNumber
+                                            number="{
+                                                path: 'genealogy>quantityAssembled',
+                                                type: 'sap.ui.model.type.Float',
+                                                formatOptions: { maxFractionDigits: 3 }
+                                            }"
+                                            emphasized="true"
+                                            state="Success" />
+                                        <Text text="{genealogy>unitOfMeasure}" />
+                                        <VBox>
+                                            <Text 
+                                                text="{genealogy>batchNumber}" 
+                                                visible="{= !!${genealogy>batchNumber}}"
+                                                class="sfcGenealogyBatch" />
+                                            <Text 
+                                                text="{genealogy>serialNumber}" 
+                                                visible="{= !!${genealogy>serialNumber}}"
+                                                class="sfcGenealogySerial" />
+                                        </VBox>
+                                        <ObjectStatus
+                                            text="{= ${genealogy>dataFieldsCount} + ' fields'}"
+                                            icon="sap-icon://tag"
+                                            state="{= ${genealogy>hasDataFields} ? 'Success' : 'None'}"
+                                            visible="{genealogy>hasDataFields}" />
+                                        <Text text="{genealogy>assembledDateTime}" wrapping="false" />
+                                    </cells>
+                                </ColumnListItem>
+                            </items>
+                        </Table>
+                    </content>
+                </Panel>
+            </VBox>
+        </f:content>
+    </f:Card>
+</mvc:View>
