@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+
+    <SelectDialog
+        id="sfcValueHelpDialog"
+        title="{i18n>selectSfc}"
+        noDataText="{i18n>noSfcsFound}"
+        items="{sfcSelection>/sfcList}"
+        search="onSfcValueHelpSearch"
+        confirm="onSfcValueHelpConfirm"
+        cancel="onSfcValueHelpClose"
+        growing="true"
+        growingThreshold="50"
+        contentHeight="60%"
+        contentWidth="600px"
+        draggable="true"
+        resizable="true">
+        <StandardListItem
+            title="{sfcSelection>sfc}"
+            description="{sfcSelection>material} - {sfcSelection>materialDescription}"
+            info="{sfcSelection>status}"
+            infoState="{= ${sfcSelection>status} === 'ACTIVE' ? 'Success' : ${sfcSelection>status} === 'IN_QUEUE' ? 'Warning' : 'Information'}"
+            icon="sap-icon://product"
+            type="Active">
+            <customData>
+                <core:CustomData key="order" value="{sfcSelection>order}" />
+            </customData>
+        </StandardListItem>
+    </SelectDialog>
+</core:FragmentDefinition>

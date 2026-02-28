@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SFC Genealogy Plugin - Local Test</title>
+    
+    <!-- SAPUI5 Bootstrap -->
+    <script
+        id="sap-ui-bootstrap"
+        src="https://ui5.sap.com/resources/sap-ui-core.js"
+        data-sap-ui-theme="sap_horizon"
+        data-sap-ui-libs="sap.m, sap.ui.layout, sap.ui.core"
+        data-sap-ui-compatVersion="edge"
+        data-sap-ui-async="true"
+        data-sap-ui-resourceroots='{
+            "sap.dm.custom.plugin.sfcGenealogy": "../",
+            "sap.dm.dme.podfoundation": "./mock"
+        }'>
+    </script>
+
+    <script>
+        sap.ui.getCore().attachInit(function() {
+            // Create a simple shell and load the component
+            sap.ui.require([
+                "sap/m/Shell",
+                "sap/m/App",
+                "sap/m/Page",
+                "sap/ui/core/ComponentContainer"
+            ], function(Shell, App, Page, ComponentContainer) {
+                
+                new Shell({
+                    app: new App({
+                        pages: [
+                            new Page({
+                                title: "SFC Genealogy Plugin - Local Test",
+                                enableScrolling: true,
+                                content: [
+                                    new ComponentContainer({
+                                        name: "sap.dm.custom.plugin.sfcGenealogy",
+                                        async: true,
+                                        height: "100%",
+                                        settings: {
+                                            id: "sfcGenealogyPlugin"
+                                        }
+                                    })
+                                ]
+                            })
+                        ]
+                    })
+                }).placeAt("content");
+            });
+        });
+    </script>
+    
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        #content {
+            height: 100%;
+        }
+    </style>
+</head>
+<body class="sapUiBody" id="content">
+</body>
+</html>

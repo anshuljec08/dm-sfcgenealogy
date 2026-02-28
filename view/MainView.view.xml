@@ -28,7 +28,65 @@
         <content>
             <VBox height="100%" class="sapUiNoMargin">
                 
-                <!-- Toolbar -->
+                <!-- SFC and Operation Selection Toolbar -->
+                <Toolbar class="sfcGenealogySelectionToolbar">
+                    <Label text="{i18n>selectSfc}:" class="sapUiTinyMarginEnd" />
+                    <Input
+                        id="sfcInput"
+                        placeholder="{i18n>sfcInputPlaceholder}"
+                        value="{sfcSelection>/selectedSfc}"
+                        width="12rem"
+                        showValueHelp="true"
+                        valueHelpRequest="onSfcValueHelp"
+                        change="onSfcInputChange"
+                        showSuggestion="true"
+                        suggestionItems="{sfcSelection>/sfcList}"
+                        suggestionItemSelected="onSfcSuggestionSelected"
+                        class="sapUiTinyMarginEnd">
+                        <suggestionItems>
+                            <core:Item key="{sfcSelection>sfc}" text="{sfcSelection>sfc}" />
+                        </suggestionItems>
+                    </Input>
+                    <Button
+                        icon="sap-icon://synchronize"
+                        tooltip="{i18n>refreshSfcList}"
+                        press="onRefreshSfcList"
+                        type="Transparent"
+                        busyIndicatorDelay="0"
+                        busy="{sfcSelection>/isLoadingSfcs}" />
+                    
+                    <ToolbarSeparator class="sapUiSmallMarginBeginEnd" />
+                    
+                    <!-- Operation Selection -->
+                    <Label text="Operation:" class="sapUiTinyMarginEnd" />
+                    <Select
+                        id="operationSelect"
+                        selectedKey="{sfcSelection>/selectedOperation}"
+                        items="{sfcSelection>/operationList}"
+                        change="onOperationSelectChange"
+                        width="12rem"
+                        enabled="{= ${sfcSelection>/operationList}.length > 0}"
+                        busyIndicatorDelay="0"
+                        busy="{sfcSelection>/isLoadingOperations}"
+                        class="sapUiTinyMarginEnd">
+                        <core:Item key="{sfcSelection>operation}" text="{sfcSelection>operation} - {sfcSelection>stepDescription}" />
+                    </Select>
+                    <Button
+                        icon="sap-icon://synchronize"
+                        tooltip="Refresh Operations"
+                        press="onRefreshOperations"
+                        type="Transparent"
+                        busyIndicatorDelay="0"
+                        busy="{sfcSelection>/isLoadingOperations}"
+                        enabled="{= !!${sfcSelection>/selectedSfc}}" />
+                    
+                    <ToolbarSpacer />
+                    <Text 
+                        text="{= ${sfcSelection>/sfcList}.length + ' SFCs'}"
+                        visible="{= ${sfcSelection>/sfcList}.length > 0}" />
+                </Toolbar>
+                
+                <!-- Search Toolbar -->
                 <Toolbar class="sfcGenealogyToolbar">
                     <SearchField
                         id="searchField"

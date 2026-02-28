@@ -1,0 +1,32 @@
+{
+  "name": "dm_genealogy",
+  "version": "1.0.0",
+  "description": "A custom POD plugin for SAP Digital Manufacturing that displays the genealogy (assembled components) of a Shop Floor Control (SFC).",
+  "main": "Component.js",
+  "scripts": {
+    "start": "npx http-server -p 8080 -c-1 --cors -o /test/index.html",
+    "serve": "npx http-server -p 8080 -c-1 --cors",
+    "test": "echo \"Open http://localhost:8080/test/index.html in browser\" && npm run serve"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/manoelfranklins/dm-sfcgenealogy.git"
+  },
+  "keywords": [
+    "sap",
+    "digital-manufacturing",
+    "pod-plugin",
+    "ui5",
+    "genealogy",
+    "sfc"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/manoelfranklins/dm-sfcgenealogy/issues"
+  },
+  "homepage": "https://github.com/manoelfranklins/dm-sfcgenealogy#readme",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

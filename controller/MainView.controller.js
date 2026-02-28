@@ -11,8 +11,10 @@ sap.ui.define([
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageToast",
     "sap/m/MessageBox",
-    "sap/base/Log"
-], function (PluginViewController, JSONModel, MessageToast, MessageBox, Log) {
+    "sap/base/Log",
+    "sap/ui/model/Filter",
+    "sap/ui/model/FilterOperator"
+], function (PluginViewController, JSONModel, MessageToast, MessageBox, Log, Filter, FilterOperator) {
     "use strict";
 
     var oLogger = Log.getLogger("sfcGenealogy", Log.Level.INFO);
@@ -57,6 +59,19 @@ sap.ui.define([
                 filterText: ""
             });
             this.getView().setModel(oViewState, "viewState");
+
+            // SFC Selection model
+            var oSfcModel = new JSONModel({
+                sfcList: [],
+                selectedSfc: "",
+                isLoadingSfcs: false,
+                sfcSearchText: "",
+                // Operation selection
+                operationList: [],
+                selectedOperation: "",
+                isLoadingOperations: false
+            });
+            this.getView().setModel(oSfcModel, "sfcSelection");
         },
 
         /**
@@ -72,8 +87,14 @@ sap.ui.define([
          * Called after view rendering
          */
         onAfterRendering: function () {
-            // Load data if SFC is already selected
-            this._loadGenealogyData();
+            // Delay loading to ensure POD is fully initialized
+            var that = this;
+            setTimeout(function() {
+                // Load SFC list on startup
+                that._loadSfcList();
+                // Load data if SFC is already selected
+                that._loadGenealogyData();
+            }, 500);
         },
 
         /**
@@ -120,6 +141,395 @@ sap.ui.define([
         },
 
         /**
+         * Load list of available SFCs from SAP DM API
+         */
+        _loadSfcList: function () {
+            var oSfcModel = this.getView().getModel("sfcSelection");
+            oSfcModel.setProperty("/isLoadingSfcs", true);
+
+            try {
+                var oPodController = this.getPodController();
+                if (!oPodController) {
+                    oLogger.warning("POD Controller not available yet");
+                    oSfcModel.setProperty("/isLoadingSfcs", false);
+                    return;
+                }
+                
+                var sPlant = oPodController.getUserPlant();
+                if (!sPlant) {
+                    oLogger.warning("Plant not available");
+                    oSfcModel.setProperty("/isLoadingSfcs", false);
+                    return;
+                }
+                
+                // Use SFC API to get list of SFCs
+                // Remove trailing slash from base URL to avoid double slashes
+                var sBaseUrl = this.getPublicApiRestDataSourceUri();
+                if (sBaseUrl.endsWith("/")) {
+                    sBaseUrl = sBaseUrl.slice(0, -1);
+                }
+                var sUrl = sBaseUrl + "/dmci/v2/extractor/SFC";
+                sUrl += "?$filter=PLANT eq '" + encodeURIComponent(sPlant) + "'";
+                sUrl += "&$select=SFC,MFG_ORDER,MATERIAL,STATUS,QUANTITY_SFC_BUILD,CREATED_AT";
+                sUrl += "&size=100"; // Limit to 100 SFCs
+
+                var that = this;
+                this.ajaxGetRequest(sUrl, null,
+                    function (oResponse) {
+                        that._processSfcListResponse(oResponse);
+                    },
+                    function (oError) {
+                        oLogger.error("Error loading SFC list:", oError);
+                        oSfcModel.setProperty("/isLoadingSfcs", false);
+                        // Silently fail - SFC list is optional
+                    }
+                );
+            } catch (e) {
+                oLogger.error("Error in _loadSfcList:", e);
+                oSfcModel.setProperty("/isLoadingSfcs", false);
+            }
+        },
+
+        /**
+         * Process SFC list API response
+         */
+        _processSfcListResponse: function (oResponse) {
+            var oSfcModel = this.getView().getModel("sfcSelection");
+            var aSfcs = [];
+
+            // Log response for debugging
+            console.log("SFC API Response:", oResponse);
+
+            // Handle different response structures
+            if (oResponse && Array.isArray(oResponse)) {
+                aSfcs = oResponse;
+            } else if (oResponse && oResponse.d && oResponse.d.results && Array.isArray(oResponse.d.results)) {
+                // OData v2 format: { d: { results: [...] } }
+                aSfcs = oResponse.d.results;
+                oLogger.info("Found SFC array in d.results (OData v2 format)");
+            } else if (oResponse && oResponse.content && Array.isArray(oResponse.content)) {
+                aSfcs = oResponse.content;
+            } else if (oResponse && oResponse.value && Array.isArray(oResponse.value)) {
+                // OData v4/DMCI Extractor response format
+                aSfcs = oResponse.value;
+            } else if (oResponse && typeof oResponse === 'object') {
+                // Try to find arrays in the response
+                for (var key in oResponse) {
+                    if (Array.isArray(oResponse[key])) {
+                        aSfcs = oResponse[key];
+                        oLogger.info("Found SFC array in key:", key);
+                        break;
+                    }
+                }
+            }
+
+            oLogger.info("Extracted " + aSfcs.length + " SFCs from response");
+
+            // Process and format SFC data - handle DMCI Extractor format (uppercase fields)
+            var aProcessedSfcs = aSfcs.map(function (oSfc) {
+                // Parse OData date format: /Date(1754175722301+0000)/
+                var sCreatedAt = oSfc.CREATED_AT || oSfc.createdDateTime || "";
+                if (sCreatedAt && sCreatedAt.indexOf("/Date(") !== -1) {
+                    try {
+                        var match = sCreatedAt.match(/\/Date\((\d+)([+-]\d{4})?\)\//);
+                        if (match && match[1]) {
+                            var timestamp = parseInt(match[1], 10);
+                            var oDate = new Date(timestamp);
+                            sCreatedAt = oDate.toLocaleString();
+                        }
+                    } catch (e) {
+                        // Keep original if parsing fails
+                    }
+                }
+
+                return {
+                    // DMCI Extractor uses uppercase field names like SFC, PLANT, MATERIAL
+                    sfc: oSfc.SFC || oSfc.sfc || oSfc.name || "",
+                    status: oSfc.STATUS || oSfc.status || oSfc.sfcStatus || "",
+                    statusDescription: oSfc.STATUS_DESCRIPTION || oSfc.statusDescription || "",
+                    material: oSfc.MATERIAL || oSfc.material || "",
+                    materialDescription: oSfc.MATERIAL_DESCRIPTION || oSfc.materialDescription || "",
+                    order: oSfc.MFG_ORDER || oSfc.shopOrder || oSfc.order || "",
+                    quantity: parseFloat(oSfc.QUANTITY_SFC_BUILD) || oSfc.quantity || 0,
+                    createdDateTime: sCreatedAt
+                };
+            }).filter(function(oSfc) {
+                // Filter out empty entries
+                return oSfc.sfc && oSfc.sfc.length > 0;
+            });
+
+            oSfcModel.setProperty("/sfcList", aProcessedSfcs);
+            oSfcModel.setProperty("/isLoadingSfcs", false);
+
+            oLogger.info("Loaded " + aProcessedSfcs.length + " SFCs");
+            
+            if (aProcessedSfcs.length > 0) {
+                MessageToast.show("Loaded " + aProcessedSfcs.length + " SFCs");
+            }
+        },
+
+        /**
+         * Handle SFC Input value help request
+         */
+        onSfcValueHelp: function () {
+            var that = this;
+            
+            // Create Value Help Dialog if not exists
+            if (!this._oSfcValueHelpDialog) {
+                sap.ui.core.Fragment.load({
+                    id: this.getView().getId(),
+                    name: "sap.dm.custom.plugin.sfcGenealogy.view.SfcValueHelpDialog",
+                    controller: this
+                }).then(function (oDialog) {
+                    that._oSfcValueHelpDialog = oDialog;
+                    that.getView().addDependent(oDialog);
+                    that._oSfcValueHelpDialog.open();
+                });
+            } else {
+                this._oSfcValueHelpDialog.open();
+            }
+        },
+
+        /**
+         * Handle SFC search in value help dialog
+         */
+        onSfcValueHelpSearch: function (oEvent) {
+            var sValue = oEvent.getParameter("value");
+            var oFilter = new Filter({
+                filters: [
+                    new Filter("sfc", FilterOperator.Contains, sValue),
+                    new Filter("material", FilterOperator.Contains, sValue),
+                    new Filter("order", FilterOperator.Contains, sValue)
+                ],
+                and: false
+            });
+            oEvent.getSource().getBinding("items").filter([oFilter]);
+        },
+
+        /**
+         * Handle SFC selection from value help dialog
+         */
+        onSfcValueHelpConfirm: function (oEvent) {
+            var oSelectedItem = oEvent.getParameter("selectedItem");
+            if (oSelectedItem) {
+                var sSfc = oSelectedItem.getTitle();
+                this._selectSfc(sSfc);
+            }
+            // Clear filter
+            oEvent.getSource().getBinding("items").filter([]);
+        },
+
+        /**
+         * Handle SFC value help close
+         */
+        onSfcValueHelpClose: function (oEvent) {
+            oEvent.getSource().getBinding("items").filter([]);
+        },
+
+        /**
+         * Handle direct SFC input change
+         */
+        onSfcInputChange: function (oEvent) {
+            var sSfc = oEvent.getParameter("value");
+            if (sSfc) {
+                this._selectSfc(sSfc);
+            }
+        },
+
+        /**
+         * Handle SFC suggestion item selected
+         */
+        onSfcSuggestionSelected: function (oEvent) {
+            var oSelectedItem = oEvent.getParameter("selectedItem");
+            if (oSelectedItem) {
+                var sSfc = oSelectedItem.getText();
+                this._selectSfc(sSfc);
+            }
+        },
+
+        /**
+         * Select an SFC and load its operations
+         */
+        _selectSfc: function (sSfc) {
+            var oGenealogyModel = this.getView().getModel("genealogy");
+            var oSfcModel = this.getView().getModel("sfcSelection");
+
+            oGenealogyModel.setProperty("/sfc", sSfc);
+            oSfcModel.setProperty("/selectedSfc", sSfc);
+            
+            // Clear previous operation selection
+            oSfcModel.setProperty("/operationList", []);
+            oSfcModel.setProperty("/selectedOperation", "");
+
+            // Load operations for selected SFC
+            this._loadOperationsForSfc(sSfc);
+        },
+
+        /**
+         * Load operations for selected SFC from SFC_STEP_STATUS API
+         */
+        _loadOperationsForSfc: function (sSfc) {
+            var oSfcModel = this.getView().getModel("sfcSelection");
+            oSfcModel.setProperty("/isLoadingOperations", true);
+
+            try {
+                var oPodController = this.getPodController();
+                if (!oPodController) {
+                    oLogger.warning("POD Controller not available");
+                    oSfcModel.setProperty("/isLoadingOperations", false);
+                    return;
+                }
+                
+                var sPlant = oPodController.getUserPlant();
+                if (!sPlant) {
+                    oLogger.warning("Plant not available");
+                    oSfcModel.setProperty("/isLoadingOperations", false);
+                    return;
+                }
+                
+                // Use SFC_STEP_STATUS API to get operations for SFC
+                var sBaseUrl = this.getPublicApiRestDataSourceUri();
+                if (sBaseUrl.endsWith("/")) {
+                    sBaseUrl = sBaseUrl.slice(0, -1);
+                }
+                
+                var sUrl = sBaseUrl + "/dmci/v2/extractor/SFC_STEP_STATUS";
+                sUrl += "?$filter=PLANT eq '" + encodeURIComponent(sPlant) + "' and SFC eq '" + encodeURIComponent(sSfc) + "'";
+
+                oLogger.info("Loading operations for SFC:", sSfc, "URL:", sUrl);
+
+                var that = this;
+                this.ajaxGetRequest(sUrl, null,
+                    function (oResponse) {
+                        that._processOperationListResponse(oResponse);
+                    },
+                    function (oError) {
+                        oLogger.error("Error loading operations:", oError);
+                        oSfcModel.setProperty("/isLoadingOperations", false);
+                        MessageToast.show("Error loading operations for SFC");
+                    }
+                );
+            } catch (e) {
+                oLogger.error("Error in _loadOperationsForSfc:", e);
+                oSfcModel.setProperty("/isLoadingOperations", false);
+            }
+        },
+
+        /**
+         * Process operation list API response
+         */
+        _processOperationListResponse: function (oResponse) {
+            var oSfcModel = this.getView().getModel("sfcSelection");
+            var aOperations = [];
+
+            // Log response for debugging
+            console.log("Operations API Response:", oResponse);
+
+            // Handle OData v2 format: { d: { results: [...] } }
+            if (oResponse && oResponse.d && oResponse.d.results && Array.isArray(oResponse.d.results)) {
+                aOperations = oResponse.d.results;
+                oLogger.info("Found operations in d.results (OData v2 format)");
+            } else if (oResponse && Array.isArray(oResponse)) {
+                aOperations = oResponse;
+            } else if (oResponse && oResponse.value && Array.isArray(oResponse.value)) {
+                aOperations = oResponse.value;
+            }
+
+            oLogger.info("Extracted " + aOperations.length + " step status records from response");
+
+            // Process and format operation data - using OPERATION_ACTIVITY field from SFC_STEP_STATUS
+            var aProcessedOperations = aOperations.map(function (oOp) {
+                return {
+                    // OPERATION_ACTIVITY is the operation name from SFC_STEP_STATUS
+                    operation: oOp.OPERATION_ACTIVITY || oOp.operation || "",
+                    stepDescription: oOp.ROUTING_STEP || "", // Use ROUTING_STEP as description
+                    routingStep: oOp.ROUTING_STEP || "",
+                    stepId: oOp.ROUTING_STEP_ID || oOp.stepId || "",
+                    resource: oOp.RESOURCE || "",
+                    workcenter: oOp.WORKCENTER || "",
+                    status: oOp.COMPLETED_AT ? "COMPLETED" : "IN_PROGRESS"
+                };
+            }).filter(function(oOp) {
+                // Filter out empty entries
+                return oOp.operation && oOp.operation.length > 0;
+            });
+
+            // Remove duplicates based on operation name
+            var aUniqueOperations = [];
+            var oSeen = {};
+            aProcessedOperations.forEach(function(oOp) {
+                if (!oSeen[oOp.operation]) {
+                    oSeen[oOp.operation] = true;
+                    aUniqueOperations.push(oOp);
+                }
+            });
+
+            // Sort by routing step
+            aUniqueOperations.sort(function(a, b) {
+                return (a.routingStep || "").localeCompare(b.routingStep || "");
+            });
+
+            oSfcModel.setProperty("/operationList", aUniqueOperations);
+            oSfcModel.setProperty("/isLoadingOperations", false);
+
+            oLogger.info("Loaded " + aUniqueOperations.length + " unique operations");
+
+            // Auto-select first operation
+            if (aUniqueOperations.length > 0) {
+                var sFirstOperation = aUniqueOperations[0].operation;
+                oSfcModel.setProperty("/selectedOperation", sFirstOperation);
+                oLogger.info("Auto-selected first operation:", sFirstOperation);
+                
+                // Load genealogy data with selected operation
+                this._loadGenealogyData();
+                
+                MessageToast.show("Loaded " + aUniqueOperations.length + " operations, selected: " + sFirstOperation);
+            } else {
+                MessageToast.show("No operations found for this SFC");
+            }
+        },
+
+        /**
+         * Handle operation select change
+         */
+        onOperationSelectChange: function (oEvent) {
+            var oSelectedItem = oEvent.getParameter("selectedItem");
+            if (oSelectedItem) {
+                var sOperation = oSelectedItem.getKey();
+                var oSfcModel = this.getView().getModel("sfcSelection");
+                oSfcModel.setProperty("/selectedOperation", sOperation);
+                
+                oLogger.info("Operation changed to:", sOperation);
+                
+                // Reload genealogy data with new operation
+                this._loadGenealogyData();
+            }
+        },
+
+        /**
+         * Refresh operations list
+         */
+        onRefreshOperations: function () {
+            var oSfcModel = this.getView().getModel("sfcSelection");
+            var sSfc = oSfcModel.getProperty("/selectedSfc");
+            
+            if (sSfc) {
+                this._loadOperationsForSfc(sSfc);
+                MessageToast.show("Refreshing operations...");
+            } else {
+                MessageToast.show("Please select an SFC first");
+            }
+        },
+
+        /**
+         * Refresh SFC list
+         */
+        onRefreshSfcList: function () {
+            this._loadSfcList();
+            MessageToast.show("Refreshing SFC list...");
+        },
+
+        /**
          * Get current SFC from POD selection
          */
         _getCurrentSfc: function () {
@@ -158,7 +568,10 @@ sap.ui.define([
          * Load genealogy data from API
          */
         _loadGenealogyData: function () {
-            var sSfc = this._getCurrentSfc();
+            // First check for manually selected SFC, then POD selection
+            var oSfcModel = this.getView().getModel("sfcSelection");
+            var sSfc = oSfcModel.getProperty("/selectedSfc") || this._getCurrentSfc();
+            
             if (!sSfc) {
                 this._clearData();
                 return;
@@ -168,8 +581,23 @@ sap.ui.define([
             oModel.setProperty("/isLoading", true);
             oModel.setProperty("/sfc", sSfc);
 
-            var sPlant = this.getPodController().getUserPlant();
-            var sOperation = this._getCurrentOperation();
+            try {
+                var oPodController = this.getPodController();
+                if (!oPodController) {
+                    oModel.setProperty("/isLoading", false);
+                    oLogger.warning("POD Controller not available");
+                    return;
+                }
+                
+                var sPlant = oPodController.getUserPlant();
+                if (!sPlant) {
+                    oModel.setProperty("/isLoading", false);
+                    oLogger.warning("Plant not available");
+                    return;
+                }
+                
+                // First check manually selected operation from dropdown, then POD selection
+                var sOperation = oSfcModel.getProperty("/selectedOperation") || this._getCurrentOperation();
             
             // operationActivity is required - just the operation name
             var sOperationActivity = sOperation || "";
@@ -178,12 +606,18 @@ sap.ui.define([
             if (!sOperationActivity) {
                 oModel.setProperty("/isLoading", false);
                 oModel.setProperty("/hasData", false);
-                this.showErrorMessage("Please select an operation to view assembled components", true, false);
+                // Don't show error - user needs to select operation first
+                oLogger.info("No operation selected yet");
                 return;
             }
 
             // Build API URL with required operationActivity parameter
-            var sUrl = this.getPublicApiRestDataSourceUri() + "/assembly/v1/assembledComponents";
+            // Remove trailing slash from base URL to avoid double slashes
+            var sBaseUrl = this.getPublicApiRestDataSourceUri();
+            if (sBaseUrl.endsWith("/")) {
+                sBaseUrl = sBaseUrl.slice(0, -1);
+            }
+            var sUrl = sBaseUrl + "/assembly/v1/assembledComponents";
             sUrl += "?plant=" + encodeURIComponent(sPlant);
             sUrl += "&sfc=" + encodeURIComponent(sSfc);
             sUrl += "&operationActivity=" + encodeURIComponent(sOperationActivity);
@@ -199,6 +633,10 @@ sap.ui.define([
                     that._handleApiError(oError);
                 }
             );
+            } catch (e) {
+                oLogger.error("Error in _loadGenealogyData:", e);
+                oModel.setProperty("/isLoading", false);
+            }
         },
 
         /**
@@ -738,11 +1176,11 @@ sap.ui.define([
             // Filter for both lists
             var oFilter = null;
             if (sQuery) {
-                oFilter = new sap.ui.model.Filter({
+                oFilter = new Filter({
                     filters: [
-                        new sap.ui.model.Filter("component", sap.ui.model.FilterOperator.Contains, sQuery),
-                        new sap.ui.model.Filter("description", sap.ui.model.FilterOperator.Contains, sQuery),
-                        new sap.ui.model.Filter("batchNumber", sap.ui.model.FilterOperator.Contains, sQuery)
+                        new Filter("component", FilterOperator.Contains, sQuery),
+                        new Filter("description", FilterOperator.Contains, sQuery),
+                        new Filter("batchNumber", FilterOperator.Contains, sQuery)
                     ],
                     and: false
                 });
