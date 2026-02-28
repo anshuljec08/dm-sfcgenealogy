@@ -206,7 +206,7 @@
                                             <HBox class="sapUiTinyMarginTop">
                                                 <Text text="Qty: {genealogy>quantityAssembled} {genealogy>unitOfMeasure}" class="sapUiTinyMarginEnd" />
                                                 <Text text="| Batch: {genealogy>batchNumber}" visible="{= !!${genealogy>batchNumber}}" class="sapUiTinyMarginEnd" />
-                                                <Text text="| Child SFC: {genealogy>sfcAssembled}" visible="{genealogy>hasChildSfc}" class="sfcGenealogyChildSfcLabel" />
+                                                <Text text="| Child SFC: {genealogy>sfcAssembled}" visible="{= ${genealogy>hasChildSfc} === true}" class="sfcGenealogyChildSfcLabel" />
                                             </HBox>
                                         </VBox>
                                     </HBox>
@@ -217,7 +217,7 @@
                                         tooltip="View child SFC genealogy: {genealogy>sfcAssembled}"
                                         press="onDrillDownToChildSfc"
                                         type="Transparent"
-                                        visible="{genealogy>hasChildSfc}"
+                                        visible="{= ${genealogy>hasChildSfc} === true}"
                                         class="sfcGenealogyDrillDownBtn">
                                         <customData>
                                             <core:CustomData key="childSfc" value="{genealogy>sfcAssembled}" />
@@ -315,7 +315,7 @@
                                             tooltip="View child SFC: {genealogy>sfcAssembled}"
                                             press="onDrillDownToChildSfc"
                                             type="Transparent"
-                                            visible="{genealogy>hasChildSfc}">
+                                            visible="{= ${genealogy>hasChildSfc} === true}">
                                             <customData>
                                                 <core:CustomData key="childSfc" value="{genealogy>sfcAssembled}" />
                                             </customData>
