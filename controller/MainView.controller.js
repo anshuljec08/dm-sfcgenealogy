@@ -469,24 +469,27 @@ sap.ui.define([
                 return (a.routingStep || "").localeCompare(b.routingStep || "");
             });
 
-            oSfcModel.setProperty("/operationList", aUniqueOperations);
+            // Add "All Operations" option at the beginning
+            var aOperationsWithAll = [{
+                operation: "ALL",
+                stepDescription: "All Operations",
+                routingStep: "",
+                isAllOption: true
+            }].concat(aUniqueOperations);
+
+            oSfcModel.setProperty("/operationList", aOperationsWithAll);
             oSfcModel.setProperty("/isLoadingOperations", false);
 
-            oLogger.info("Loaded " + aUniqueOperations.length + " unique operations");
+            oLogger.info("Loaded " + aUniqueOperations.length + " unique operations (plus ALL option)");
 
-            // Auto-select first operation
-            if (aUniqueOperations.length > 0) {
-                var sFirstOperation = aUniqueOperations[0].operation;
-                oSfcModel.setProperty("/selectedOperation", sFirstOperation);
-                oLogger.info("Auto-selected first operation:", sFirstOperation);
-                
-                // Load genealogy data with selected operation
-                this._loadGenealogyData();
-                
-                MessageToast.show("Loaded " + aUniqueOperations.length + " operations, selected: " + sFirstOperation);
-            } else {
-                MessageToast.show("No operations found for this SFC");
-            }
+            // Auto-select "ALL" as default
+            oSfcModel.setProperty("/selectedOperation", "ALL");
+            oLogger.info("Auto-selected 'ALL' operations as default");
+            
+            // Load genealogy data with ALL operations
+            this._loadGenealogyData();
+            
+            MessageToast.show("Loaded " + aUniqueOperations.length + " operations, showing ALL");
         },
 
         /**
@@ -598,44 +601,165 @@ sap.ui.define([
                 
                 // First check manually selected operation from dropdown, then POD selection
                 var sOperation = oSfcModel.getProperty("/selectedOperation") || this._getCurrentOperation();
-            
-            // operationActivity is required - just the operation name
-            var sOperationActivity = sOperation || "";
 
-            // If no operation, show message and return
-            if (!sOperationActivity) {
+                // If no operation, show message and return
+                if (!sOperation) {
+                    oModel.setProperty("/isLoading", false);
+                    oModel.setProperty("/hasData", false);
+                    oLogger.info("No operation selected yet");
+                    return;
+                }
+
+                // Check if "ALL" is selected - load data for all operations
+                if (sOperation === "ALL") {
+                    this._loadAllOperationsData(sSfc, sPlant);
+                    return;
+                }
+
+                // Build API URL with required operationActivity parameter
+                var sBaseUrl = this.getPublicApiRestDataSourceUri();
+                if (sBaseUrl.endsWith("/")) {
+                    sBaseUrl = sBaseUrl.slice(0, -1);
+                }
+                var sUrl = sBaseUrl + "/assembly/v1/assembledComponents";
+                sUrl += "?plant=" + encodeURIComponent(sPlant);
+                sUrl += "&sfc=" + encodeURIComponent(sSfc);
+                sUrl += "&operationActivity=" + encodeURIComponent(sOperation);
+
+                oLogger.info("Fetching assembled components for SFC: " + sSfc + ", Operation: " + sOperation);
+
+                var that = this;
+                this.ajaxGetRequest(sUrl, null,
+                    function (oResponse) {
+                        that._processApiResponse(oResponse, sSfc);
+                    },
+                    function (oError) {
+                        that._handleApiError(oError);
+                    }
+                );
+            } catch (e) {
+                oLogger.error("Error in _loadGenealogyData:", e);
+                oModel.setProperty("/isLoading", false);
+            }
+        },
+
+        /**
+         * Load genealogy data for ALL operations
+         * Calls API for each operation and merges results
+         */
+        _loadAllOperationsData: function (sSfc, sPlant) {
+            var oSfcModel = this.getView().getModel("sfcSelection");
+            var oModel = this.getView().getModel("genealogy");
+            var aOperationList = oSfcModel.getProperty("/operationList") || [];
+            
+            // Filter out the "ALL" option to get actual operations
+            var aActualOperations = aOperationList.filter(function(oOp) {
+                return oOp.operation !== "ALL" && oOp.operation;
+            });
+
+            if (aActualOperations.length === 0) {
                 oModel.setProperty("/isLoading", false);
                 oModel.setProperty("/hasData", false);
-                // Don't show error - user needs to select operation first
-                oLogger.info("No operation selected yet");
+                MessageToast.show("No operations available to load");
                 return;
             }
 
-            // Build API URL with required operationActivity parameter
-            // Remove trailing slash from base URL to avoid double slashes
+            oLogger.info("Loading data for ALL " + aActualOperations.length + " operations");
+
             var sBaseUrl = this.getPublicApiRestDataSourceUri();
             if (sBaseUrl.endsWith("/")) {
                 sBaseUrl = sBaseUrl.slice(0, -1);
             }
-            var sUrl = sBaseUrl + "/assembly/v1/assembledComponents";
-            sUrl += "?plant=" + encodeURIComponent(sPlant);
-            sUrl += "&sfc=" + encodeURIComponent(sSfc);
-            sUrl += "&operationActivity=" + encodeURIComponent(sOperationActivity);
-
-            oLogger.info("Fetching assembled components for SFC: " + sSfc + ", Operation: " + sOperationActivity);
 
             var that = this;
-            this.ajaxGetRequest(sUrl, null,
-                function (oResponse) {
-                    that._processApiResponse(oResponse, sSfc);
-                },
-                function (oError) {
-                    that._handleApiError(oError);
+            var aAllComponents = [];
+            var nCompleted = 0;
+            var nTotal = aActualOperations.length;
+            var nErrors = 0;
+
+            // Call API for each operation
+            aActualOperations.forEach(function(oOp) {
+                var sUrl = sBaseUrl + "/assembly/v1/assembledComponents";
+                sUrl += "?plant=" + encodeURIComponent(sPlant);
+                sUrl += "&sfc=" + encodeURIComponent(sSfc);
+                sUrl += "&operationActivity=" + encodeURIComponent(oOp.operation);
+
+                oLogger.info("Fetching for operation: " + oOp.operation);
+
+                that.ajaxGetRequest(sUrl, null,
+                    function (oResponse) {
+                        // Extract components from response
+                        var aComponents = that._extractComponentsFromResponse(oResponse);
+                        oLogger.info("Got " + aComponents.length + " components from " + oOp.operation);
+                        
+                        // Add to combined list
+                        aAllComponents = aAllComponents.concat(aComponents);
+                        
+                        nCompleted++;
+                        that._checkAllOperationsComplete(nCompleted, nTotal, nErrors, aAllComponents, sSfc);
+                    },
+                    function (oError) {
+                        oLogger.warning("Error loading data for operation " + oOp.operation + ":", oError);
+                        nErrors++;
+                        nCompleted++;
+                        that._checkAllOperationsComplete(nCompleted, nTotal, nErrors, aAllComponents, sSfc);
+                    }
+                );
+            });
+        },
+
+        /**
+         * Extract components array from API response
+         */
+        _extractComponentsFromResponse: function (oResponse) {
+            var aComponents = [];
+            
+            if (oResponse && Array.isArray(oResponse)) {
+                aComponents = oResponse;
+            } else if (oResponse && oResponse.assembledComponents && Array.isArray(oResponse.assembledComponents)) {
+                aComponents = oResponse.assembledComponents;
+            } else if (oResponse && oResponse.value && Array.isArray(oResponse.value)) {
+                aComponents = oResponse.value;
+            } else if (oResponse && typeof oResponse === 'object') {
+                for (var key in oResponse) {
+                    if (Array.isArray(oResponse[key])) {
+                        aComponents = oResponse[key];
+                        break;
+                    }
                 }
-            );
-            } catch (e) {
-                oLogger.error("Error in _loadGenealogyData:", e);
-                oModel.setProperty("/isLoading", false);
+            }
+            
+            return aComponents;
+        },
+
+        /**
+         * Check if all operation API calls are complete and process results
+         */
+        _checkAllOperationsComplete: function (nCompleted, nTotal, nErrors, aAllComponents, sSfc) {
+            if (nCompleted < nTotal) {
+                return; // Still waiting for more responses
+            }
+
+            oLogger.info("All operations complete. Total components: " + aAllComponents.length + ", Errors: " + nErrors);
+
+            var oModel = this.getView().getModel("genealogy");
+
+            // Process all collected components
+            var aProcessedComponents = this._processComponents(aAllComponents);
+            var aHierarchyData = this._buildHierarchy(aProcessedComponents, sSfc);
+
+            oModel.setProperty("/components", aProcessedComponents);
+            oModel.setProperty("/hierarchyData", aHierarchyData);
+            oModel.setProperty("/totalComponents", aProcessedComponents.length);
+            oModel.setProperty("/hasData", aProcessedComponents.length > 0);
+            oModel.setProperty("/isLoading", false);
+            oModel.setProperty("/lastRefresh", new Date().toLocaleString());
+
+            if (aProcessedComponents.length === 0) {
+                MessageToast.show("No assembled components found for this SFC");
+            } else {
+                this._buildVisualChart(aProcessedComponents, sSfc);
+                MessageToast.show("Loaded " + aProcessedComponents.length + " components from all operations");
             }
         },
 
