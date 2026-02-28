@@ -2,11 +2,15 @@
 
 A custom POD plugin for SAP Digital Manufacturing that displays the genealogy (assembled components) of a Shop Floor Control (SFC).
 
-<img width="1915" height="1076" alt="image" src="https://github.com/user-attachments/assets/43d3bc16-d8ec-45fc-99c6-fe017c088966" />
+<img width="1512" alt="SFC Genealogy Plugin" src="https://github.com/user-attachments/assets/e068f0e4-bad9-48e3-a82e-5777bd421016" />
 
 ## Features
 
-- **Component Hierarchy View**: Flat list showing all assembled components with key information
+- **SFC Selection Dropdown**: Search and select SFCs with value help dialog
+- **Operation Selection**: 
+  - **"All Operations" mode (default)** - Shows assembled components from ALL operations combined
+  - Select specific operation to filter components by operation
+- **Component Hierarchy View**: Collapsible list showing all assembled components with key information
 - **Components Summary Table**: Detailed table view with all component data
 - **Visual Hierarchy Chart**: Graphical tree visualization of SFC and its components
 - **Data Fields Popover**: Click to view assembly data fields for each component
@@ -14,6 +18,13 @@ A custom POD plugin for SAP Digital Manufacturing that displays the genealogy (a
 - **Search/Filter**: Filter all views by component name, description, or batch number
 - **Export to CSV**: Download component data as CSV file
 - **Responsive Design**: Works on desktop and tablet devices
+
+## What's New
+
+### v2.0 - All Operations Feature
+- Added "ALL - All Operations" as the default selection when an SFC is selected
+- When "ALL" is selected, the plugin fetches components from all operations and merges them
+- Users can still filter by a specific operation if needed
 
 ## Installation
 
@@ -26,16 +37,17 @@ A custom POD plugin for SAP Digital Manufacturing that displays the genealogy (a
 ## Usage
 
 1. Add the plugin to a POD layout in POD Designer
-2. Select an SFC from the worklist
-3. Select an operation from the operation list (required)
-4. The plugin will display all assembled components for that SFC at the selected operation
+2. Select an SFC from the dropdown (with search/value help)
+3. Operations are loaded automatically from the SFC Step Status
+4. **"ALL - All Operations"** is selected by default to show all components
+5. Optionally select a specific operation to filter
+6. The plugin displays all assembled components for that SFC
 
 ## Views
 
 ### Component Hierarchy
 
 <img width="1897" height="493" alt="image" src="https://github.com/user-attachments/assets/d5aff6a1-12a3-4838-bd6b-75d0ad1c935f" />
-<img width="1915" height="1076" alt="image" src="https://github.com/user-attachments/assets/43d3bc16-d8ec-45fc-99c6-fe017c088966" />
 
 - Collapsible panel showing components in a flat list
 - Shows component name, description, quantity, unit of measure, and batch number
@@ -68,9 +80,15 @@ A custom POD plugin for SAP Digital Manufacturing that displays the genealogy (a
 
 ## API
 
-This plugin uses the SAP DM Assembly API:
+This plugin uses the following SAP DM APIs:
+
+### Assembly API
 - Endpoint: `/assembly/v1/assembledComponents`
 - Parameters: `plant`, `sfc`, `operationActivity`
+
+### DMCI Extractor API (for SFC and Operation lists)
+- SFC List: `/dmci/v2/extractor/SFC`
+- Operation List: `/dmci/v2/extractor/SFC_STEP_STATUS`
 
 ## Files Structure
 
@@ -82,7 +100,8 @@ sfcGenealogy/
 │   └── MainView.controller.js  # Main controller logic
 ├── view/
 │   ├── MainView.view.xml       # Main view
-│   └── ComponentDetailsDialog.fragment.xml  # Details dialog
+│   ├── ComponentDetailsDialog.fragment.xml  # Details dialog
+│   └── SfcValueHelpDialog.fragment.xml      # SFC value help
 ├── designer/
 │   └── components.json         # POD Designer configuration
 ├── builder/
@@ -105,10 +124,10 @@ sfcGenealogy/
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👨‍💻 Author
+## 👨‍💻 Authors
 
-Manoel Costa
-http://manoelcosta.com/
+- Manoel Costa - [manoelcosta.com](http://manoelcosta.com/)
+- Enhanced by Anshul - [@anshuljec08](https://github.com/anshuljec08)
 
 ---
 
