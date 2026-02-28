@@ -378,3 +378,36 @@
         border: 1px solid #ccc !important;
     }
 }
+
+/* ============================================
+   Multi-Level Genealogy Breadcrumb
+   ============================================ */
+
+.sfcGenealogyBreadcrumbToolbar {
+    background: linear-gradient(180deg, #e8f4fd 0%, #f5faff 100%) !important;
+    border-bottom: 2px solid #0a6ed1 !important;
+    padding: 0.5rem 1rem !important;
+}
+
+.sfcGenealogyBreadcrumbToolbar .sapMLabel {
+    font-weight: 600 !important;
+    color: #0854a0 !important;
+}
+
+.sfcGenealogyCurrentSfc {
+    font-weight: bold !important;
+    color: #0a6ed1 !important;
+}
+
+.sfcGenealogyChildSfcLabel {
+    color: #0a6ed1 !important;
+    font-weight: 500 !important;
+}
+
+.sfcGenealogyDrillDownBtn {
+    color: #0a6ed1 !important;
+}
+
+.sfcGenealogyDrillDownBtn:hover {
+    background-color: #e8f4fd !important;
+}

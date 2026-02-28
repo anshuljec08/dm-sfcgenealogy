@@ -86,6 +86,22 @@
                         visible="{= ${sfcSelection>/sfcList}.length > 0}" />
                 </Toolbar>
                 
+                <!-- Breadcrumb Navigation for Multi-Level Genealogy -->
+                <Toolbar 
+                    class="sfcGenealogyBreadcrumbToolbar"
+                    visible="{sfcSelection>/hasParentSfc}">
+                    <Button
+                        icon="sap-icon://navigation-left-arrow"
+                        text="Back to Parent"
+                        press="onNavigateToParentSfc"
+                        type="Emphasized" />
+                    <ToolbarSeparator />
+                    <Label text="Navigation Path:" class="sapUiTinyMarginEnd" />
+                    <Text text="{path: 'sfcSelection>/sfcBreadcrumb', formatter: '.formatBreadcrumbPath'}" />
+                    <Text text=" → " />
+                    <Text text="{sfcSelection>/selectedSfc}" class="sfcGenealogyCurrentSfc" />
+                </Toolbar>
+                
                 <!-- Search Toolbar -->
                 <Toolbar class="sfcGenealogyToolbar">
                     <SearchField
@@ -182,15 +198,31 @@
                             items="{genealogy>/components}"
                             class="sfcGenealogyTree">
                             <CustomListItem type="Active" press="onComponentRowPress">
-                                <HBox alignItems="Center" class="sapUiSmallMarginBeginEnd sapUiTinyMarginTopBottom">
-                                    <core:Icon src="sap-icon://inventory" class="sapUiSmallMarginEnd" color="#27ae60" />
-                                    <VBox>
-                                        <Text text="{genealogy>component} - {genealogy>description}" class="sfcGenealogyComponentName" />
-                                        <HBox class="sapUiTinyMarginTop">
-                                            <Text text="Qty: {genealogy>quantityAssembled} {genealogy>unitOfMeasure}" class="sapUiTinyMarginEnd" />
-                                            <Text text="| Batch: {genealogy>batchNumber}" visible="{= !!${genealogy>batchNumber}}" />
-                                        </HBox>
-                                    </VBox>
+                                <HBox alignItems="Center" justifyContent="SpaceBetween" class="sapUiSmallMarginBeginEnd sapUiTinyMarginTopBottom">
+                                    <HBox alignItems="Center">
+                                        <core:Icon src="sap-icon://inventory" class="sapUiSmallMarginEnd" color="#27ae60" />
+                                        <VBox>
+                                            <Text text="{genealogy>component} - {genealogy>description}" class="sfcGenealogyComponentName" />
+                                            <HBox class="sapUiTinyMarginTop">
+                                                <Text text="Qty: {genealogy>quantityAssembled} {genealogy>unitOfMeasure}" class="sapUiTinyMarginEnd" />
+                                                <Text text="| Batch: {genealogy>batchNumber}" visible="{= !!${genealogy>batchNumber}}" class="sapUiTinyMarginEnd" />
+                                                <Text text="| Child SFC: {genealogy>sfcAssembled}" visible="{genealogy>hasChildSfc}" class="sfcGenealogyChildSfcLabel" />
+                                            </HBox>
+                                        </VBox>
+                                    </HBox>
+                                    <!-- Drill-down button for components with child SFC -->
+                                    <Button
+                                        icon="sap-icon://drill-down"
+                                        text="View Child"
+                                        tooltip="View child SFC genealogy: {genealogy>sfcAssembled}"
+                                        press="onDrillDownToChildSfc"
+                                        type="Transparent"
+                                        visible="{genealogy>hasChildSfc}"
+                                        class="sfcGenealogyDrillDownBtn">
+                                        <customData>
+                                            <core:CustomData key="childSfc" value="{genealogy>sfcAssembled}" />
+                                        </customData>
+                                    </Button>
                                 </HBox>
                             </CustomListItem>
                         </List>
@@ -248,6 +280,9 @@
                                 <Column width="14rem" minScreenWidth="Desktop" demandPopin="true">
                                     <Text text="{i18n>assembledDateTime}" />
                                 </Column>
+                                <Column width="6rem" hAlign="Center" minScreenWidth="Desktop" demandPopin="true">
+                                    <Text text="Child SFC" />
+                                </Column>
                             </columns>
                             <items>
                                 <ColumnListItem type="Navigation" press="onComponentRowPress">
@@ -275,6 +310,16 @@
                                             press="onDataFieldsPress"
                                             enabled="{= ${genealogy>dataFieldsCount} > 0 }" />
                                         <Text text="{genealogy>assembledDateTime}" wrapping="false" />
+                                        <Button
+                                            icon="sap-icon://drill-down"
+                                            tooltip="View child SFC: {genealogy>sfcAssembled}"
+                                            press="onDrillDownToChildSfc"
+                                            type="Transparent"
+                                            visible="{genealogy>hasChildSfc}">
+                                            <customData>
+                                                <core:CustomData key="childSfc" value="{genealogy>sfcAssembled}" />
+                                            </customData>
+                                        </Button>
                                     </cells>
                                 </ColumnListItem>
                             </items>

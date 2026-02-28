@@ -34,6 +34,16 @@ sap.ui.define([
         },
 
         /**
+         * Formatter for breadcrumb path display
+         */
+        formatBreadcrumbPath: function (aBreadcrumb) {
+            if (!aBreadcrumb || aBreadcrumb.length === 0) {
+                return "";
+            }
+            return aBreadcrumb.map(function(b) { return b.sfc; }).join(" → ");
+        },
+
+        /**
          * Initialize view models
          */
         _initModels: function () {
@@ -60,7 +70,7 @@ sap.ui.define([
             });
             this.getView().setModel(oViewState, "viewState");
 
-            // SFC Selection model
+            // SFC Selection model with breadcrumb navigation for multi-level genealogy
             var oSfcModel = new JSONModel({
                 sfcList: [],
                 selectedSfc: "",
@@ -69,7 +79,11 @@ sap.ui.define([
                 // Operation selection
                 operationList: [],
                 selectedOperation: "",
-                isLoadingOperations: false
+                isLoadingOperations: false,
+                // Multi-level genealogy breadcrumb navigation
+                sfcBreadcrumb: [], // Array of {sfc: "SFC123", label: "SFC123"} for navigation history
+                currentLevel: 0,
+                hasParentSfc: false
             });
             this.getView().setModel(oSfcModel, "sfcSelection");
         },
@@ -929,6 +943,10 @@ sap.ui.define([
                 // Get serial number from main object (serialNumber field) or data fields
                 var sSerialNumber = oComp.serialNumber || oDataFieldsMap["SERIAL_NUMBER"] || oDataFieldsMap["ERP_SERIAL_NUMBER"] || "";
 
+                // Get child SFC (assembled SFC)
+                var sChildSfc = oComp.sfcAssembled || oComp.assembledSfc || oComp.childSfc || "";
+                var bHasChildSfc = sChildSfc && sChildSfc.length > 0;
+
                 return {
                     id: iIndex + 1,
                     component: oComp.component || oComp.material || oComp.componentMaterial || "",
@@ -942,7 +960,8 @@ sap.ui.define([
                     assembledDateTime: sAssembledDate,
                     assembledBy: oComp.assembledBy || oComp.userId || oComp.modifiedBy || oComp.createdBy || "",
                     bomComponent: oComp.bomComponent || oComp.bomComponentRef || "",
-                    sfcAssembled: oComp.sfcAssembled || oComp.assembledSfc || oComp.childSfc || "",
+                    sfcAssembled: sChildSfc,
+                    hasChildSfc: bHasChildSfc, // Flag for drill-down capability
                     batchNumber: sBatchNumber,
                     serialNumber: sSerialNumber,
                     vendorBatchNumber: oComp.vendorBatchNumber || oDataFieldsMap["VENDOR_BATCH"] || "",
@@ -1354,6 +1373,179 @@ sap.ui.define([
          */
         onClosePress: function () {
             this.closePlugin();
+        },
+
+        // ==================== Multi-Level Genealogy (Drill-Down) ====================
+
+        /**
+         * Navigate to child SFC (drill-down)
+         * Saves current SFC in breadcrumb and loads child SFC genealogy
+         */
+        onDrillDownToChildSfc: function (oEvent) {
+            var oSource = oEvent.getSource();
+            var sChildSfc = oSource.data("childSfc");
+            
+            if (!sChildSfc) {
+                MessageToast.show("No child SFC available");
+                return;
+            }
+
+            this._drillDownToSfc(sChildSfc);
+        },
+
+        /**
+         * Drill down to a specific SFC
+         */
+        _drillDownToSfc: function (sChildSfc) {
+            var oSfcModel = this.getView().getModel("sfcSelection");
+            var sCurrentSfc = oSfcModel.getProperty("/selectedSfc");
+            var aBreadcrumb = oSfcModel.getProperty("/sfcBreadcrumb") || [];
+
+            // Add current SFC to breadcrumb
+            if (sCurrentSfc) {
+                aBreadcrumb.push({
+                    sfc: sCurrentSfc,
+                    label: sCurrentSfc
+                });
+            }
+
+            // Update breadcrumb and navigate to child SFC
+            oSfcModel.setProperty("/sfcBreadcrumb", aBreadcrumb);
+            oSfcModel.setProperty("/currentLevel", aBreadcrumb.length);
+            oSfcModel.setProperty("/hasParentSfc", true);
+
+            oLogger.info("Drilling down from " + sCurrentSfc + " to child SFC: " + sChildSfc);
+            oLogger.info("Breadcrumb:", aBreadcrumb.map(function(b) { return b.sfc; }).join(" > "));
+
+            // Load child SFC data
+            this._selectSfcWithoutClearingBreadcrumb(sChildSfc);
+
+            MessageToast.show("Viewing child SFC: " + sChildSfc);
+        },
+
+        /**
+         * Select SFC without clearing breadcrumb (for drill-down navigation)
+         */
+        _selectSfcWithoutClearingBreadcrumb: function (sSfc) {
+            var oGenealogyModel = this.getView().getModel("genealogy");
+            var oSfcModel = this.getView().getModel("sfcSelection");
+
+            oGenealogyModel.setProperty("/sfc", sSfc);
+            oSfcModel.setProperty("/selectedSfc", sSfc);
+            
+            // Clear previous operation selection
+            oSfcModel.setProperty("/operationList", []);
+            oSfcModel.setProperty("/selectedOperation", "");
+
+            // Load operations for selected SFC
+            this._loadOperationsForSfc(sSfc);
+        },
+
+        /**
+         * Navigate back to parent SFC in breadcrumb
+         */
+        onNavigateToParentSfc: function () {
+            var oSfcModel = this.getView().getModel("sfcSelection");
+            var aBreadcrumb = oSfcModel.getProperty("/sfcBreadcrumb") || [];
+
+            if (aBreadcrumb.length === 0) {
+                MessageToast.show("No parent SFC to navigate to");
+                return;
+            }
+
+            // Pop the last SFC from breadcrumb
+            var oParent = aBreadcrumb.pop();
+            var sParentSfc = oParent.sfc;
+
+            // Update breadcrumb state
+            oSfcModel.setProperty("/sfcBreadcrumb", aBreadcrumb);
+            oSfcModel.setProperty("/currentLevel", aBreadcrumb.length);
+            oSfcModel.setProperty("/hasParentSfc", aBreadcrumb.length > 0);
+
+            oLogger.info("Navigating back to parent SFC: " + sParentSfc);
+
+            // Load parent SFC data
+            this._selectSfcWithoutClearingBreadcrumb(sParentSfc);
+
+            MessageToast.show("Returned to: " + sParentSfc);
+        },
+
+        /**
+         * Navigate to specific SFC in breadcrumb (clicking a breadcrumb item)
+         */
+        onBreadcrumbSelect: function (oEvent) {
+            var oSfcModel = this.getView().getModel("sfcSelection");
+            var aBreadcrumb = oSfcModel.getProperty("/sfcBreadcrumb") || [];
+            
+            // Get the index of the clicked breadcrumb item
+            var oSource = oEvent.getSource();
+            var iIndex = oSource.data("breadcrumbIndex");
+            
+            if (iIndex === undefined || iIndex === null) {
+                return;
+            }
+
+            iIndex = parseInt(iIndex, 10);
+
+            // Get the target SFC
+            var sTargetSfc = aBreadcrumb[iIndex].sfc;
+
+            // Trim breadcrumb to the clicked level
+            aBreadcrumb = aBreadcrumb.slice(0, iIndex);
+
+            // Update breadcrumb state
+            oSfcModel.setProperty("/sfcBreadcrumb", aBreadcrumb);
+            oSfcModel.setProperty("/currentLevel", aBreadcrumb.length);
+            oSfcModel.setProperty("/hasParentSfc", aBreadcrumb.length > 0);
+
+            oLogger.info("Navigating to breadcrumb SFC: " + sTargetSfc);
+
+            // Load target SFC data
+            this._selectSfcWithoutClearingBreadcrumb(sTargetSfc);
+        },
+
+        /**
+         * Clear breadcrumb when selecting a new SFC from dropdown
+         */
+        _clearBreadcrumb: function () {
+            var oSfcModel = this.getView().getModel("sfcSelection");
+            oSfcModel.setProperty("/sfcBreadcrumb", []);
+            oSfcModel.setProperty("/currentLevel", 0);
+            oSfcModel.setProperty("/hasParentSfc", false);
+        },
+
+        /**
+         * Get breadcrumb display text
+         */
+        getBreadcrumbText: function () {
+            var oSfcModel = this.getView().getModel("sfcSelection");
+            var aBreadcrumb = oSfcModel.getProperty("/sfcBreadcrumb") || [];
+            var sCurrentSfc = oSfcModel.getProperty("/selectedSfc") || "";
+
+            if (aBreadcrumb.length === 0) {
+                return sCurrentSfc;
+            }
+
+            var aPath = aBreadcrumb.map(function(b) { return b.sfc; });
+            aPath.push(sCurrentSfc);
+            return aPath.join(" → ");
+        },
+
+        /**
+         * Handle drill-down button press in Component Details Dialog
+         */
+        onDrillDownFromDialog: function () {
+            if (this._oDetailsDialog) {
+                var oDetailsModel = this._oDetailsDialog.getModel("details");
+                var sChildSfc = oDetailsModel.getProperty("/sfcAssembled");
+                
+                if (sChildSfc) {
+                    this._oDetailsDialog.close();
+                    this._drillDownToSfc(sChildSfc);
+                } else {
+                    MessageToast.show("No child SFC available");
+                }
+            }
         }
     });
 });
