@@ -29,7 +29,7 @@ A custom POD plugin for SAP Digital Manufacturing that displays the genealogy (a
 ## Installation
 
 1. Download or clone this repository
-2. Zip all files (not the folder, just the contents)
+2. Use the pre-built `sfcGenealogy_plugin.zip` file or zip all files (not the folder, just the contents)
 3. Upload to SAP Digital Manufacturing POD Designer as a custom plugin
 
 <img width="1437" height="706" alt="image" src="https://github.com/user-attachments/assets/f4e31680-ea76-4a1d-a7a8-cc82b13409f7" />
